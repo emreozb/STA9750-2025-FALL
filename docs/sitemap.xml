@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://emreozb.github.io/STA9750-2025-FALL/miniproject01.html</loc>
-    <lastmod>2025-10-04T01:59:47.749Z</lastmod>
-  </url>
-  <url>
     <loc>https://emreozb.github.io/STA9750-2025-FALL/mp01.html</loc>
     <lastmod>2025-10-04T02:15:24.837Z</lastmod>
+  </url>
+  <url>
+    <loc>https://emreozb.github.io/STA9750-2025-FALL/index.html</loc>
+    <lastmod>2025-10-04T01:09:04.692Z</lastmod>
   </url>
 </urlset>
