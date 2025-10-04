@@ -10,7 +10,7 @@ website:
     left:
       - href: index.qmd
         text: Home
-      - href: miniproject01.qmd
+      - href: mp01.qmd
         text: Mini-Project 01
     background: primary
     search: false
@@ -28,5 +28,5 @@ editor:
     left:
       - href: index.qmd
         text: Home
-      - href: miniproject01.qmd
+      - href: mp01.qmd
         text: Mini-Project 01

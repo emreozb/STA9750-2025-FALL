@@ -13,8 +13,8 @@ if(file.exists("index.qmd")){
   system("git add index.qmd")
 }
 
-if(file.exists("miniproject01.qmd")){
-  system("git add miniproject01.qmd")
+if(file.exists("mp01.qmd")){
+  system("git add mp01.qmd")
 }
 
 # if(!any(grepl("rstudio", search()))){q("no")}
