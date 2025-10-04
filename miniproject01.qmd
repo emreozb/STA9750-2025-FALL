@@ -1,5 +1,9 @@
 ---
 title: "Exploring the Most Popular Programming on Netflix"
+format:
+  html:
+    theme: flatly   # overrides Darkly just for this page
+    toc: true       # adds table of contents if you want
 ---
 
 ```{r}
@@ -24,23 +28,7 @@ COUNTRY_TOP_10_FILENAME <- file.path("data", "mp01", "country_top10_alltime.csv"
 
 # Read the GLOBAL Top 10 tsv file into R as a tibble
 #    (read_tsv will auto-parse types like dates/numbers)
-<<<<<<< HEAD
 # -------------------------------
-GLOBAL_TOP_10 <- read_tsv(GLOBAL_TOP_10_FILENAME)
-
-# -------------------------------
-# 3) Quick structure checks for GLOBAL data
-#    - str(): base R structure (types + preview)
-#    - glimpse(): dplyr-friendly, compact column summary
-# -------------------------------
-str(GLOBAL_TOP_10)
-glimpse(GLOBAL_TOP_10)
-
-# -------------------------------
-# 4) Data cleaning (GLOBAL): convert literal "N/A" strings
-#    in season_title into real NA values (character type)
-# -------------------------------
-=======
 GLOBAL_TOP_10 <- read_tsv(GLOBAL_TOP_10_FILENAME)
 
 # Quick structure checks for GLOBAL data
@@ -51,7 +39,6 @@ glimpse(GLOBAL_TOP_10)
 
 # Data cleaning (GLOBAL): convert literal "N/A" strings
 #    in season_title into real NA values (character type)
->>>>>>> 0ed6adc (mini01 v1)
 GLOBAL_TOP_10 <- GLOBAL_TOP_10 |>
   mutate(
     season_title = if_else(
@@ -60,30 +47,6 @@ GLOBAL_TOP_10 <- GLOBAL_TOP_10 |>
       season_title
     )
   )
-
-<<<<<<< HEAD
-# -------------------------------
-# 5) Confirm the fix took effect (season_title now shows NA, not "N/A")
-# -------------------------------
-glimpse(GLOBAL_TOP_10)
-
-# -------------------------------
-# 6) Read the COUNTRY Top 10 file
-#    (This file typically has ranks by country/week and no per-country hours)
-# -------------------------------
-COUNTRY_TOP_10 <- read_tsv(COUNTRY_TOP_10_FILENAME)
-
-# -------------------------------
-# 7) Structure check for COUNTRY data
-# -------------------------------
-str(COUNTRY_TOP_10)
-glimpse(COUNTRY_TOP_10)
-
-# -------------------------------
-# 8) Data cleaning (COUNTRY): same "N/A" → NA fix on season_title
-#    (Alternative: read_tsv(..., na = "N/A") to convert at import)
-# -------------------------------
-=======
 
 # Confirm the fix took effect (season_title now shows NA, not "N/A")
 glimpse(GLOBAL_TOP_10)
@@ -98,7 +61,6 @@ glimpse(COUNTRY_TOP_10)
 
 # Data cleaning (COUNTRY): same "N/A" → NA fix on season_title
 #   (Alternative: read_tsv(..., na = "N/A") to convert at import)
->>>>>>> 0ed6adc (mini01 v1)
 COUNTRY_TOP_10 <- COUNTRY_TOP_10 |>
   mutate(
     season_title = if_else(
@@ -108,42 +70,24 @@ COUNTRY_TOP_10 <- COUNTRY_TOP_10 |>
     )
   )
 
-<<<<<<< HEAD
-# -------------------------------
-# 9) Confirm the COUNTRY fix
-# -------------------------------
-glimpse(COUNTRY_TOP_10)
 
-# -------------------------------
-# 10) Load DT to build interactive HTML tables for quick EDA
+# Load DT to build interactive HTML tables for quick EDA
 #     (great for small, curated previews)
-# -------------------------------
 library(DT)
 
-# -------------------------------
-# 11) Simple preview table: first 20 GLOBAL rows, minimal chrome
-#     - searching/info disabled to look cleaner in a report
-# -------------------------------
-=======
 # Confirm the COUNTRY fix
 glimpse(COUNTRY_TOP_10)
 
 # Simple preview table: first 20 GLOBAL rows, minimal chrome
 #   - searching/info disabled to look cleaner in a report
->>>>>>> 0ed6adc (mini01 v1)
 GLOBAL_TOP_10 |>
   head(n = 20) |>
   datatable(options = list(searching = FALSE, info = FALSE))
 
-<<<<<<< HEAD
-# -------------------------------
-# 12) Define a helper to prettify column names for display:
-#     - underscores → spaces, then Title Case
-# -------------------------------
-=======
+
 # Define a helper to prettify column names for display:
 #     - underscores → spaces, then Title Case
->>>>>>> 0ed6adc (mini01 v1)
+
 library(stringr)
 format_titles <- function(df) {
   colnames(df) <- colnames(df) |>
@@ -152,30 +96,19 @@ format_titles <- function(df) {
   df
 }
 
-<<<<<<< HEAD
-# -------------------------------
-# 13) Preview with pretty headers, first 20 rows
+
+# Preview with pretty headers, first 20 rows
 #     - formatRound() adds commas/decimals for numeric readability
 #       (use digits = 0 if you don’t want .00)
-# -------------------------------
-=======
-# review with pretty headers, first 20 rows
-#     - formatRound() adds commas/decimals for numeric readability
-#       (use digits = 0 if you don’t want .00)
->>>>>>> 0ed6adc (mini01 v1)
+
 GLOBAL_TOP_10 |>
   format_titles() |>
   head(n = 20) |>
   datatable(options = list(searching = FALSE, info = FALSE)) |>
   formatRound(c("Weekly Hours Viewed", "Weekly Views"))
 
-<<<<<<< HEAD
-# -------------------------------
-# 14) Same preview but drop season_title since films often have NA there
-# -------------------------------
-=======
 # Same preview but drop season_title since films often have NA there
->>>>>>> 0ed6adc (mini01 v1)
+
 GLOBAL_TOP_10 |>
   select(-season_title) |>
   format_titles() |>
@@ -183,15 +116,9 @@ GLOBAL_TOP_10 |>
   datatable(options = list(searching = FALSE, info = FALSE)) |>
   formatRound(c("Weekly Hours Viewed", "Weekly Views"))
 
-<<<<<<< HEAD
-# -------------------------------
-# 15) Add a runtime-in-minutes column for readability,
-#     then drop the original 'runtime' (hours) and season_title
-# -------------------------------
-=======
 # Add a runtime-in-minutes column for readability,
 #     then drop the original 'runtime' (hours) and season_title
->>>>>>> 0ed6adc (mini01 v1)
+
 GLOBAL_TOP_10 |>
   mutate(`runtime_(minutes)` = round(60 * runtime)) |>
   select(
@@ -579,12 +506,3 @@ Collectively, these films represent the strongest showing yet for Netflix’s no
 “Stories don’t need translation to travel,” said **[Insert Executive Name, Title]**. “Our global audiences are embracing cinema from every corner of the world — and we’re doubling down on that in 2025 with even more ambitious local productions.”  
 
 As Netflix continues to invest in regional and international films, this surge in non-English viewing positions the platform to capture expanding audiences in **Asia, Latin America, Europe, and beyond**.  
-
-
-
-
-
-
-
-
-
