@@ -12,6 +12,8 @@ website:
         text: Home
       - href: mp01.qmd
         text: Mini-Project 01
+      - href: mp02.qmd
+        text: Mini-Project 02
     background: primary
     search: false
     
@@ -30,3 +32,5 @@ editor:
         text: Home
       - href: mp01.qmd
         text: Mini-Project 01
+      - href: mp02.qmd
+        text: Mini-Project 02
