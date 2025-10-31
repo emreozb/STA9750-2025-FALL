@@ -17,7 +17,7 @@ format:
     toc-depth: 3          # include up to ### headings
     number-sections: false
 resources:
-  - /**
+  - policy_brief.pdf
 ---
 
 ![](intro_header.jpg)
