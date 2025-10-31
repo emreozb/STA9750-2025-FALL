@@ -21,6 +21,7 @@ format:
   html:
     theme: darkly
     toc: false
+  pdf: default
 
 editor:
   mode: source

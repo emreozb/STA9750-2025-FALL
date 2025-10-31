@@ -2,27 +2,25 @@
 project:
   type: website
   output-dir: docs
-title: "YIMBY by Numbers: Identifying America’s Most Housing-Friendly Cities"
 website:
   title: "YIMBY by Numbers: Identifying America’s Most Housing-Friendly Cities"
   navbar:
-    search: true        # shows the search box in the header
+    search: true
   pdf:
     toc: true
     latex-engine: xelatex
     number-sections: true
     keep-tex: false
-    
 format:
   html:
-    theme: flatly   
+    theme: flatly
     toc: true
-    toc-title: "CONTENT"
-    toc-location: left   # puts the TOC on the right
-    toc-depth: 3          # include up to ### headings
+    toc-title: CONTENT
+    toc-location: left
+    toc-depth: 3
     number-sections: false
-resources:
-  - policy_brief.pdf
+resources: policy_brief.pdf
+output: pdf_document
 ---
 
 ![](intro_header.jpg)
