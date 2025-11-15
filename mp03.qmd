@@ -1191,6 +1191,7 @@ health_counts32 %>%
 #| code-fold: true
 #| message: false
 #| warning: false
+
 health_counts32 <- health_counts32 %>%
   mutate(
     pct = n / sum(n),
