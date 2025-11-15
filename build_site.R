@@ -21,6 +21,10 @@ if(file.exists("mp02.qmd")){
   system("git add mp02.qmd")
 }
 
+if(file.exists("mp03.qmd")){
+  system("git add mp03.qmd")
+}
+
 # if(!any(grepl("rstudio", search()))){q("no")} 
 
 

@@ -21,8 +21,9 @@ format:
     toc-location: left   # puts the TOC on the right
     toc-depth: 3          # include up to ### headings
     number-sections: false
-resources:
-  - policy_brief.pdf
+    page-layout: full
+    self-contained: false
+
 ---
 
 ![](intro_header2.png)
@@ -266,8 +267,8 @@ The resulting dataset enables district-level summaries and visualizations that h
 #| code-fold: true
 #| message: false
 #| warning: false
-st_crs(all_trees)
-st_crs(council_districts)
+#st_crs(all_trees)
+#st_crs(council_districts)
 
 all_trees <- st_transform(all_trees, st_crs(council_districts))
 
@@ -328,8 +329,6 @@ trees_by_cd <- trees_with_cd |>
   st_drop_geometry() |>
   count(CounDist, name = "tree_count") |>
   arrange(CounDist)
-
-trees_by_cd
 
 library(knitr)
 library(kableExtra)
@@ -472,10 +471,18 @@ trees_density_km2 |>
 #| message: false
 #| warning: false
 
+cond_by_cd <- trees_with_cd |>
+  st_drop_geometry() |>
+  count(CounDist, tpcondition, name = "n") |>
+  group_by(CounDist) |>
+  mutate(
+    total = sum(n),               # <-- THIS is the total column
+    pct   = 100 * n / total
+  ) |>
+  ungroup()
+
 dead_top10 <- cond_by_cd |>
-  # keep only "Dead" rows
   filter(tpcondition == "Dead") |>
-  # add borough by council district range
   mutate(
     Borough = case_when(
       CounDist >= 1  & CounDist <= 10 ~ "Manhattan",
@@ -486,14 +493,13 @@ dead_top10 <- cond_by_cd |>
       TRUE ~ NA_character_
     )
   ) |>
-  # rank by highest % dead
   arrange(desc(pct)) |>
   slice_head(n = 10) |>
   mutate(
-    Rank          = row_number(),
-    total_fmt     = format(total_in_cd, big.mark = ","),
-    dead_fmt      = format(n,          big.mark = ","),
-    pct_fmt       = sprintf("%.1f%%", pct)
+    Rank      = row_number(),
+    total_fmt = format(total, big.mark = ","),  # <-- changed here
+    dead_fmt  = format(n,     big.mark = ","),
+    pct_fmt   = sprintf("%.1f%%", pct)
   )
 
 dead_top10 |>
@@ -581,14 +587,6 @@ manhattan_species_top10 <- all_trees_with_borough %>%
     pct_fmt   = sprintf("%.1f%%", pct)
   )
 
-manhattan_species_top10 %>%
-  select(
-    Rank,
-    Species               = genusspecies,
-    Borough               = Borough,
-    `Number of Trees`     = count_fmt,
-    `% of Manhattan Trees` = pct_fmt
-  )
 
 manhattan_species_top10 %>%
   select(
@@ -616,7 +614,7 @@ manhattan_species_top10 %>%
     position          = "center"
   ) %>%
   row_spec(0, bold = TRUE, color = "white", background = "#0056b3") %>%  # header
-  row_spec(1, bold = TRUE, color = "white", background = "#007bff")  %>% scroll_box(width = "100%", height = "auto")    # top species 
+  row_spec(1, bold = TRUE, color = "white", background = "#007bff")  
   
 ```
 
@@ -772,7 +770,7 @@ map_baruch
 #| warning: false
 library(stringr)
 closest_tree_wgs <- st_transform(closest_pt, 4326)
-closest_pt$genusspecies
+#closest_pt$genusspecies
 
 
 species_raw <- closest_pt$genusspecies
@@ -840,7 +838,10 @@ We propose the following targets:
 
 ### Zoomed-In District Map 
 
-```{r setup, include=FALSE}
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
 library(ragg)
 knitr::opts_chunk$set(
   dev = "ragg_png",
@@ -848,7 +849,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r district32-map, fig.width=7, fig.height=5, dev="png", fig.path="figs/"}
+```{r}
 #| code-fold: true
 #| message: false
 #| warning: false
@@ -931,7 +932,7 @@ p_north <- ggplot() +
 print(p_north)
 ```
 
-```{r district32-map, fig.width=7, fig.height=5, dev="png", fig.path="figs/"}
+```{r}
 #| code-fold: true
 #| message: false
 #| warning: false
@@ -1093,11 +1094,24 @@ A targeted, data-driven investment in this district would not only address curre
 Because the all-trees map was extremely dense, I created an interactive leaflet visualization that allows zooming, panning, and clicking on individual trees to reveal species and condition. This dramatically improves usability compared to a static plot.
 
 ```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
 library(leaflet)
 library(sf)
 library(dplyr)
 
-leaflet(trees_with_cd) %>%
+
+set.seed(123)
+# 1) Filter District 32 first
+trees_32 <- trees_with_cd %>%
+  filter(CounDist == 32)
+
+# 2) Sample up to 10,000 trees (or all of them if there are fewer)
+trees_sample <- trees_32 %>%
+  slice_sample(n = min(10000, nrow(trees_32)))
+
+leaflet(trees_sample) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addCircleMarkers(
     radius = 2,
@@ -1132,6 +1146,9 @@ leaflet(trees_with_cd) %>%
 I also downloaded the Tree Risk Assessment dataset, which includes risk ratings such as ‘Low’, ‘Moderate’, ‘Moderate to High’, and ‘Critical’. I used this data to identify how many risky trees exist in District 32 and to compare risk levels to the percentage of dead trees.
 
 ```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
 library(dplyr)
 url_risk <- "https://data.cityofnewyork.us/resource/nwxe-4ae8.csv?$limit=500000"
 
@@ -1172,6 +1189,9 @@ health_counts32 %>%
 
 ```{r}
 # Add percentages
+#| code-fold: true
+#| message: false
+#| warning: false
 health_counts32 <- health_counts32 %>%
   mutate(
     pct = n / sum(n),
