@@ -1188,7 +1188,6 @@ health_counts32 %>%
 ```
 
 ```{r}
-# Add percentages
 #| code-fold: true
 #| message: false
 #| warning: false
