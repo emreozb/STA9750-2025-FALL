@@ -1,0 +1,1532 @@
+---
+project:
+  type: website
+  output-dir: docs
+title: "Branches of Insight: Mapping the Health of New York’s Trees"
+website:
+  title: "Branches of Insight: Mapping the Health of New York’s Trees"
+  navbar:
+    search: true        # shows the search box in the header
+  pdf:
+    toc: true
+    latex-engine: xelatex
+    number-sections: true
+    keep-tex: false
+    
+format:
+  html:
+    theme: flatly   
+    toc: true
+    toc-title: "CONTENT"
+    toc-location: left   # puts the TOC on the right
+    toc-depth: 3          # include up to ### headings
+    number-sections: false
+    page-layout: full
+    self-contained: false
+
+---
+
+
+## Introduction
+
+Every month, the Bureau of Labor Statistics releases the nation’s most closely watched economic indicator: **nonfarm payroll employment.** Financial markets move within seconds of its release, policy decisions hinge on its interpretation, and business leaders treat it as a barometer of economic momentum. Yet behind the headline number is a quieter reality—**the first estimate is rarely the final word.**
+
+Over the past 45 years, the BLS has regularly revised its employment estimates as additional survey responses arrive and seasonal adjustment models update. Some revisions are small; others—particularly during recessions or periods of economic stress—can dramatically reshape the narrative of the labor market. Understanding the **size, direction, and behavior of CES revisions** is therefore essential for analysts, policymakers, and anyone who relies on the payrolls report to interpret the economy in real time.
+
+This project examines the history of CES payroll revisions from **1979 to 2025**, focusing on both the magnitude of revisions and the factors that shape them. Using a combination of raw payroll levels and revision detail, we evaluate:
+
+- When revisions tend to be largest—such as recessions or periods of high economic volatility
+- Whether revisions have become more accurate over time
+- Seasonal patterns across months and broader patterns across decades
+- How relative revision size (as a percentage of total payrolls) has evolved
+- The extreme revision events, including those during the early 1980s and the COVID-19 shock
+
+Together, these analyses reveal a long-run story: while the U.S. labor market has grown more complex, the **accuracy of the payrolls report has improved dramatically**, with occasional but notable breakdowns during moments of rapid economic change.
+
+Ultimately, this project provides a data-driven view of **how well we can trust the first read** of America’s most influential economic statistic—and when caution, context, and historical perspective are most needed.
+
+
+## 📥 Data Acquisition
+
+### 📊 T1: CES Payroll Employment Levels (Series CES0000000001)
+
+o analyze how payroll estimates have changed over time, we begin by collecting monthly nonfarm payroll employment data from the **Bureau of Labor Statistics (BLS) Current Employment Statistics (CES)** program. The specific series used in this project is:
+
+**- CES0000000001 — All employees, total nonfarm, thousands**
+
+Because BLS does not provide a direct CSV link for historical CES revisions, the data must be retrieved via the **BLS “PDQ” SurveyOutputServlet**, which powers the tables on the BLS website. Using an httr2 POST request, the project sends form parameters that replicate a browser request, allowing us to programmatically download the full historical payroll series from **1979 through 2025.**
+
+The returned HTML is parsed using **rvest**, and the main data table is transformed into a clean monthly time series tibble named **ces_levels**, containing:
+
+- date (YYYY-MM-01)
+- level (employment level in thousands)
+
+This dataset forms the baseline for analyzing how large revisions are relative to the overall size of the U.S. labor market.
+
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+suppressPackageStartupMessages({
+  library(readr)
+  library(knitr)
+  library(dplyr)
+  library(DT)
+  library(stringr)
+  library(htmltools)
+  library(lubridate)
+  library(ggplot2)
+  library(tidyverse)
+  library(purrr)
+  library(glue)
+  library(readxl)
+  library(tidycensus)
+  library(httr2)
+  library(rvest)
+  library(sf)
+  library(kableExtra)
+})
+
+get_ces_levels <- function() {
+  url <- "https://data.bls.gov/pdq/SurveyOutputServlet"
+  
+  resp <- request(url) |>
+    req_method("POST") |>
+    req_body_form(
+      request_action          = "get_data",
+      reformat                = "true",
+      from_results_page       = "true",
+      from_year               = "1979",
+      to_year                 = "2025",
+      data_tool               = "surveymost",
+      series_id               = "CES0000000001",
+      original_annualAveragesRequested = "false"
+    ) |>
+    req_perform()
+  
+  html <- resp_body_html(resp)
+  
+  # You already found the right table logic:
+  tables <- html |> html_elements("table")
+  tbl <- tables |>
+  map(~ html_table(.x, fill = TRUE)) |>
+  keep(~ ncol(.x) > 5)
+
+  raw_table <- tbl[[1]] 
+
+  
+  month_cols <- c("Jan","Feb","Mar","Apr","May","Jun",
+                  "Jul","Aug","Sep","Oct","Nov","Dec")
+  
+  ces_levels <- raw_table |>
+    mutate(Year = as.integer(Year)) |>
+    select(Year, all_of(month_cols)) |>
+    pivot_longer(
+      cols      = all_of(month_cols),
+      names_to  = "month",
+      values_to = "level"
+    ) |>
+    mutate(
+      date  = ym(paste(Year, month)),
+      level = as.numeric(str_replace(level, ",", ""))
+    ) |>
+    drop_na(date, level) |>
+    arrange(date) |>
+    select(date, level)
+  
+  ces_levels
+}
+
+ces_levels <- get_ces_levels()
+
+ces_levels |>
+  arrange(desc(level)) |>          # <-- ORDER BY LEVEL (DESC)
+  slice_head(n = 10) |>
+  mutate(
+    Rank = row_number(),
+    level_formatted = format(level, big.mark = ",")
+  ) |>
+  select(Rank, date, level_formatted) |>
+  kable(
+    col.names = c("Rank", "Date", "Employment Level"),
+    align = c("c", "c", "r"),
+    caption = "Top 10 Highest Employment Levels in CES Total Nonfarm Payroll (SA)"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = TRUE,
+    position   = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3") |>
+  row_spec(1, bold = TRUE, color = "white", background = "#007bff")
+
+
+```
+
+
+### 🔁 T2: CES Payroll Revisions (Original vs. Final Estimates)
+
+
+The second major dataset contains the **original and revised CES estimates** for each month. These values are published on a separate BLS webpage containing annual tables of:
+
+- original estimate (first published)
+- final estimate (after revisions)
+- implied revision (final – original)
+
+Since each table is embedded in HTML and structured differently across years, extraction requires custom scraping. Using httr2 and rvest, the project:
+
+1. Downloads the full revisions page
+2. Identifies available year tables dynamically
+3. Extracts the 12 monthly rows for each year (Jan–Dec)
+4. Cleans non-numeric formatting
+5. Converts month and year into a proper date
+6. Computes the revision amount
+
+The result is a tibble named **ces_revisions** with:
+
+- date
+- original
+- final
+- revision (final − original)
+
+Combining this with payroll levels allows us to study revisions both in absolute terms (jobs gained/lost due to revision) and in **relative terms** (revision magnitude as a percent of total employment).
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+# assumes you already ran the libraries above
+get_ces_revisions <- function() {
+  url_rev <- "https://www.bls.gov/web/empsit/cesnaicsrev.htm"
+  
+  page <- request(url_rev) |>
+    req_method("GET") |>
+    req_headers(
+      "User-Agent"      = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+      "Accept"          = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language" = "en-US,en;q=0.5",
+      "Referer"         = "https://www.google.com/"
+    ) |>
+    req_perform() |>
+    resp_body_html()
+  
+  extract_revision_year <- function(year) {
+    tbl_node <- page |> html_element(paste0("#", year))
+    if (inherits(tbl_node, "xml_missing")) {
+      return(tibble(date = as.Date(character()),
+                    original = numeric(),
+                    final = numeric(),
+                    revision = numeric()))
+    }
+    
+    tbl <- tbl_node |> html_table(header = FALSE, fill = TRUE)
+    
+    # usually first 3 rows = header → 4:15 are the 12 months
+    tbl_clean <- tbl |>
+      slice(4:15) |>
+      select(
+        month    = 1,
+        year_col = 2,
+        original = 3,
+        final    = 5
+      ) |>
+      mutate(
+        original = as.numeric(gsub("[^0-9-]", "", original)),
+        final    = as.numeric(gsub("[^0-9-]", "", final)),
+        date     = ym(paste(year_col, month)),
+        revision = final - original
+      ) |>
+      select(date, original, final, revision)
+    
+    tbl_clean
+  }
+  
+  years <- 1979:2025
+  
+  ces_revisions <- purrr::map_df(years, extract_revision_year) |>
+    arrange(date)
+  
+  ces_revisions
+}
+
+ces_revisions <- get_ces_revisions()
+
+ces_revisions |>
+  arrange(desc(revision)) |>        # <-- largest upward revisions
+  slice_head(n = 10) |>
+  mutate(
+    Rank = row_number(),
+    original_fmt = format(original, big.mark = ","),
+    final_fmt    = format(final, big.mark = ","),
+    revision_fmt = format(revision, big.mark = ",")
+  ) |>
+  select(Rank, date, original_fmt, final_fmt, revision_fmt) |>
+  kable(
+    col.names = c("Rank", "Date", "Original Estimate", "Final Estimate", "Revision (+)"),
+    align = c("c", "c", "r", "r", "r"),
+    caption = "Top 10 Largest Upward Revisions in CES Payroll Estimates (1979–2025)"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = TRUE,
+    position = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3") |>  
+  row_spec(1, bold = TRUE, color = "white", background = "#007bff")
+
+
+```
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+
+ces_revisions |>
+  arrange(revision) |>              # <-- smallest (most negative) revisions first
+  slice_head(n = 10) |>
+  mutate(
+    Rank = row_number(),
+    original_fmt = format(original, big.mark = ","),
+    final_fmt    = format(final, big.mark = ","),
+    revision_fmt = format(revision, big.mark = ",")
+  ) |>
+  select(Rank, date, original_fmt, final_fmt, revision_fmt) |>
+  kable(
+    col.names = c("Rank", "Date", "Original Estimate", "Final Estimate", "Revision (–)"),
+    align = c("c", "c", "r", "r", "r"),
+    caption = "Top 10 Largest Downward Revisions in CES Payroll Estimates (1979–2025)"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = TRUE,
+    position = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#b30000") |>  
+  row_spec(1, bold = TRUE, color = "white", background = "#ff3333")
+```
+
+
+### 🔗 T1&T2: Merged Dataset for Analysis
+
+Finally, the two datasets are merged by date to create a unified analytical table:
+
+- **ces_full**
+
+This data frame includes:
+
+- employment level
+- original & final estimates
+- revision size
+- relative revision (%)
+- decade, year, month indicators
+- additional derived variables for grouping and visualization
+
+This merged dataset supports the full set of analyses in the project, including extreme revision detection, seasonal patterns, decade-level comparisons, recession overlays, and long-run accuracy trends.
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+
+ces_full <- ces_levels |>
+  inner_join(ces_revisions, by = "date") |>
+  arrange(date) |>
+  mutate(
+    abs_revision       = abs(revision),
+    rel_revision_level = abs_revision / level,
+    year               = year(date),
+    month_num          = month(date),
+    month_name         = month(date, label = TRUE, abbr = TRUE),
+    decade             = floor(year / 10) * 10
+  )
+
+ces_full |>
+  slice_head(n = 10) |>
+  mutate(
+    Row = row_number(),
+    level_fmt        = format(level, big.mark = ","),
+    original_fmt     = format(original, big.mark = ","),
+    final_fmt        = format(final, big.mark = ","),
+    revision_fmt     = format(revision, big.mark = ","),
+    abs_revision_fmt = format(abs_revision, big.mark = ","),
+    rel_revision_level_fmt = scales::percent(rel_revision_level, accuracy = 0.01)
+  ) |>
+  select(
+    Row, date, level_fmt, original_fmt, final_fmt, revision_fmt,
+    abs_revision_fmt, rel_revision_level_fmt,
+    year, month_num, month_name, decade
+  ) |>
+  kable(
+    col.names = c(
+      "Row", "Date", "Employment Level", "Original", "Final", "Revision",
+      "Abs Revision", "Revision % of Level",
+      "Year", "Month #", "Month Name", "Decade"
+    ),
+    align = c("c","c","r","r","r","r","r","r","c","c","c","c"),
+    caption = "First 10 Rows of the Combined CES Dataset (`ces_full`)"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = TRUE,
+    position   = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3") |>  
+  row_spec(1, bold = TRUE, color = "white", background = "#007bff")
+
+```
+
+## 📈🔎 Data Exploration and Visualization
+
+### 1. Largest CES Payroll Revisions in U.S. History
+
+::: {.callout-note title="Findings"}
+The CES payroll series shows substantial variation in the size and direction of revisions, but extreme events are rare. The table and bar charts highlight the **largest upward and downward revisions** recorded since 1979, revealing clear patterns tied to periods of economic stress and measurement uncertainty.
+
+**🔺 Largest Upward Revision: +437,000 (November 2021)**
+The single largest upward revision occurred in **November 2021**, when initial estimates understated payrolls by **437,000** jobs. This occurred during the highly volatile labor market recovery following the COVID-19 recession. Rapid hiring, delayed survey responses, and unusual seasonal patterns likely contributed to the unusually large adjustment. Other large positive revisions also cluster in rapidly changing labor markets such as the early 1980s and the post-COVID reopening period.
+
+**🔺 Largest Downward Revision: −672,000 (March 2020)**
+The most severe downward revision in the entire dataset occurred in **March 2020**, coinciding with the onset of COVID-19 shutdowns. Initial survey-based estimates severely under-captured the collapse in employment, and the BLS later revised the number down by **672,000** jobs as more complete information became available. Additional large negative revisions—including May 1980 (−303k), July 1982 (−287k), and April 2020 (−250k)—also coincide with recessionary periods, when volatility and nonresponse make real-time measurement more difficult.
+
+**📌 Key Patterns and Interpretation**
+- **Extreme revisions occur during periods of economic shock.** Both the largest upward and downward revisions are associated with the COVID-19 pandemic, highlighting how difficult it is to measure the labor market accurately when conditions change rapidly.
+
+- **Large negative revisions are more common in recessions.** The early 1980s recession, the Great Recession (2008), and the COVID downturn all show significant downward adjustments as initial estimates overstated employment.
+
+- **Large positive revisions often occur in sharp recoveries.** When hiring surges quickly—as in the reopening labor market of 2021—initial estimates tend to understate job growth.
+
+- **The scale of revisions today is measured in hundreds of thousands.** This underscores both the size of the modern labor market and the challenge of producing accurate early estimates for more than 150 million workers.
+
+**Overall Insight**
+These extreme cases show that while CES estimates are generally reliable, **the first published payroll number can deviate substantially from reality during periods of rapid economic change.** Analysts, policymakers, and markets should interpret initial releases with caution during shocks, recessions, and recoveries—precisely when the employment data is most consequential.
+:::
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+# ces_full |> summarise(
+#   mean_revision = mean(revision),
+#   median_revision = median(revision)
+# )
+
+overall_revision_stats <- ces_full |>
+  summarise(
+    mean_revision   = mean(revision, na.rm = TRUE),
+    median_revision = median(revision, na.rm = TRUE)
+  ) |>
+  mutate(
+    mean_revision_fmt   = format(round(mean_revision, 1), big.mark = ","),
+    median_revision_fmt = format(round(median_revision, 1), big.mark = ",")
+  ) |>
+  select(
+    `Mean Revision` = mean_revision_fmt,
+    `Median Revision` = median_revision_fmt
+  )
+
+overall_revision_stats |>
+  kable(
+    align = c("r", "r"),
+    caption = "Overall Average and Median CES Payroll Revision"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position   = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3")
+```
+```{r}
+
+payroll_revisions_data <- ces_full |>
+  arrange(date) |> 
+  mutate(
+    # Month-over-month change in employment level
+    level_change = level - lag(level),
+
+    # Relative revision magnitude (% of final estimate)
+    rel_revision = abs(revision) / abs(final) * 100,
+
+    # Revision as % of employment level
+    revision_pct_level = revision / level * 100,
+
+    # Absolute revision magnitude
+    abs_revision = abs(revision),
+
+    # Extract year, month, decade
+    year = year(date),
+    month = month(date, label = TRUE),
+    decade = floor(year / 10) * 10,
+
+    # Period flags
+    post_2000 = year >= 2000,
+    post_2020 = year >= 2020,
+
+    # Revision categories
+    is_negative = revision < 0,
+    is_large_revision = abs_revision > 100,
+    large_revision_pct = abs(revision_pct_level) > 0.1,
+
+    # Categorize employment level changes
+    large_level_change = abs(level_change) > median(abs(level_change), na.rm = TRUE)
+  )
+
+# Extract largest positive & negative revisions
+largest_positive <- ces_full |>
+  filter(revision == max(revision, na.rm = TRUE)) |>
+  mutate(type = "Largest Upward Revision")
+
+largest_negative <- ces_full |>
+  filter(revision == min(revision, na.rm = TRUE)) |>
+  mutate(type = "Largest Downward Revision")
+
+# Combine into one table
+largest_revisions_table <- bind_rows(largest_positive, largest_negative) |>
+  mutate(
+    revision_fmt = format(revision, big.mark = ","),
+    original_fmt = format(original, big.mark = ","),
+    final_fmt    = format(final, big.mark = ",")
+  ) |>
+  select(
+    Type = type,
+    Date = date,
+    Revision = revision_fmt,
+    Original = original_fmt,
+    Final = final_fmt
+  )
+
+# Nicely formatted output
+largest_revisions_table |>
+  kable(
+    col.names = c("Type", "Date", "Revision", "Original", "Final"),
+    align = c("l","c","r","r","r"),
+    caption = "Largest Upward and Downward CES Payroll Revisions"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = TRUE,
+    position   = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3") |>
+  row_spec(1, bold = TRUE, color = "white", background = "#007bff")
+
+```
+```{r}
+top_pos <- ces_full |>
+  arrange(desc(revision)) |>
+  slice_head(n = 10) |>
+  mutate(
+    type        = "Largest Positive Revisions",
+    month_label = format(date, "%b %Y"),
+    sign        = "positive",
+    month_label = fct_reorder(month_label, revision)
+  )
+
+top_neg <- ces_full |>
+  arrange(revision) |>
+  slice_head(n = 10) |>
+  mutate(
+    type        = "Largest Negative Revisions",
+    month_label = format(date, "%b %Y"),
+    sign        = "negative",
+    month_label = fct_reorder(month_label, revision)
+  )
+
+# Combine & format
+top_revisions <- bind_rows(top_neg, top_pos) |>
+  mutate(
+    type = factor(type,
+                  levels = c("Largest Negative Revisions",
+                             "Largest Positive Revisions")),
+    label_text = paste0(comma(revision), "K"),
+    hjust_val  = if_else(revision > 0, -0.2, 1.2),
+    fill_color = if_else(revision > 0,
+                         "#2ca25f",   # GREEN (positive)
+                         "#e31a1c")   # RED (negative)
+  )
+
+# 2. Plot
+ggplot(top_revisions, aes(x = month_label, y = revision)) +
+  geom_col(aes(fill = fill_color), show.legend = FALSE) +
+  scale_fill_identity() +
+  coord_flip() +
+  facet_wrap(~ type, ncol = 1, scales = "free_y") +
+  geom_text(
+    aes(label = label_text, hjust = hjust_val),
+    size = 3.8,
+    fontface = "bold",
+    color = "black"
+  ) +
+  scale_y_continuous(
+    labels = function(x) paste0(comma(x), "K"),
+    expand = expansion(mult = c(0.05, 0.25))
+  ) +
+  labs(
+    title    = "Largest CES Employment Revisions in History",
+    subtitle = "Top 10 upward and downward revisions, 1979–2025",
+    x        = NULL,
+    y        = "Revision (thousands of jobs)",
+    caption  = "Source: Bureau of Labor Statistics Current Employment Statistics"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    strip.text         = element_text(face = "bold", size = 14),
+    plot.title         = element_text(face = "bold", size = 20),
+    plot.subtitle      = element_text(size = 13),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank()
+  )
+```
+
+### 2. Direction of CES Revisions by Decade
+
+::: {.callout-note title="Findings"}
+
+- **1970s–1980s:** Negative revisions were more common (58% in the 1970s, 49% in the 1980s).
+➜ Initial CES estimates tended to **overstate job growth** during these decades.
+
+- **1990s:** The pattern flipped. About **69% of revisions were positive**, the highest of any decade.
+➜ Initial estimates **understated employment gains**, reflecting improvements in survey methods and a stable labor market.
+
+- **2000s–2010s:** Revisions became more balanced but still leaned upward (54–63% positive).
+➜ CES estimates were generally accurate, with a slight tendency to undercount jobs.
+
+- **2020s:** Negative revisions rise again (54%).
+➜ Driven mainly by **COVID-19 volatility**, which caused unusually large downward corrections.
+
+**Overall Summary**
+There is **no consistent long-term bias** toward positive or negative revisions. Instead, revision patterns shift with economic conditions and methodological changes. The 2020s spike in negative revisions is an exception caused by pandemic-related measurement challenges—not evidence of a structural failure in BLS reporting.
+:::
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+largest_pos <- ces_full |> slice_max(revision, n = 1)
+largest_neg <- ces_full |> slice_min(revision, n = 1)
+positive_by_decade <- ces_full |>
+  group_by(decade) |>
+  summarise(
+    frac_positive = mean(revision > 0, na.rm = TRUE)
+  ) |>
+  mutate(
+    pct_positive_fmt = sprintf("%.1f%%", frac_positive * 100)
+  ) |>
+  select(
+    Decade = decade,
+    `Fraction Positive` = pct_positive_fmt
+  )
+
+positive_by_decade |>
+  kable(
+    align = c("c", "r"),
+    caption = "Fraction of Months with Positive CES Payroll Revisions by Decade"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position   = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3")
+```
+
+```{r}
+decade_summary <- ces_full |>
+  filter(!is.na(revision)) |>
+  mutate(is_negative = revision < 0) |>
+  group_by(decade) |>
+  summarise(
+    total        = n(),
+    negative     = sum(is_negative),
+    pct_negative = mean(is_negative) * 100,
+    .groups = "drop"
+  )
+
+decade_summary |>
+  mutate(
+    pct_negative_fmt = sprintf("%.1f%%", pct_negative)
+  ) |>
+  select(
+    decade,
+    total,
+    negative,
+    pct_negative_fmt
+  ) |>
+  kable(
+    col.names = c(
+      "Decade",
+      "Total Months",
+      "Negative Revisions",
+      "% Negative"
+    ),
+    align = c("c", "c", "c", "r"),
+    caption = "Distribution of Negative Revisions by Decade"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = TRUE,
+    position   = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3") |>
+  row_spec(1, bold = TRUE, color = "white", background = "#007bff")
+```
+
+### 3. Long-Run Trends in Relative Revision Magnitude
+
+::: {.callout-note title="Findings"}
+
+The size of CES payroll revisions has **declined substantially over time**, indicating clear improvements in measurement accuracy. Revision magnitudes were largest in the **1970s and 1980s** (mean absolute revisions of 94k and 72k jobs), then fell sharply through the **1990s–2010s**, reaching their lowest level in the 2010s (35k). This shows that the CES program became much more precise over the last 40 years.
+
+The 2020s show a temporary spike back upward (86k), driven almost entirely by the extreme volatility of the COVID-19 labor market. Outside of that anomaly, the long-run trend is unmistakable: **CES revisions have become smaller, more stable, and more reliable over time.**
+:::
+
+```{r}
+revision_magnitude <- ces_full |>
+  filter(!is.na(abs_revision)) |>
+  group_by(decade) |>
+  summarise(
+    mean_abs_revision   = mean(abs_revision, na.rm = TRUE),
+    median_abs_revision = median(abs_revision, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+revision_magnitude |>
+  mutate(
+    mean_abs_revision_fmt   = format(mean_abs_revision, big.mark = ",", digits = 1),
+    median_abs_revision_fmt = format(median_abs_revision, big.mark = ",", digits = 1)
+  ) |>
+  select(
+    decade,
+    mean_abs_revision_fmt,
+    median_abs_revision_fmt
+  ) |>
+  kable(
+    col.names = c(
+      "Decade",
+      "Mean Absolute Revision",
+      "Median Absolute Revision"
+    ),
+    align = c("c", "r", "r"),
+    caption = "Average Revision Magnitude by Decade (thousands of jobs)"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = TRUE,
+    position   = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3") |> 
+  row_spec(1, bold = TRUE, color = "white", background = "#007bff")
+```
+
+
+### 4. Long-Run Trends in Relative Revision Magnitude
+
+::: {.callout-note title="Findings"}
+
+The **average CES revision is extremely small relative to total U.S. payroll employment.** Across the entire 1979–2025 period, the average revision amounts to only **0.048%** of the employment level—less than **five-hundredths of one percent.** This indicates that, in normal conditions, CES revisions are **tiny compared to the size of the labor market.**
+
+However, the top-10 table makes it clear that **large relative revisions do occur**, but only in exceptional circumstances:
+
+- The **largest relative revision** occurred in **March 2020, at 0.45% of payroll employment,** reflecting the unprecedented collapse in labor markets at the onset of COVID-19.
+
+- Almost all other large relative revisions come from the **early 1980s recession**, when CES sampling error was higher and economic conditions were extremely volatile.
+
+In typical months, revisions are **far below 0.1%**, but during periods of severe economic disruption, the revision share temporarily increases. Taken together, this shows that CES revisions are **highly accurate during stable periods,** and large deviations mostly reflect **true economic shocks rather than systematic measurement problems.**
+:::
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+ces_full |>
+  summarise(avg_rel_revision = mean(rel_revision_level)) |>
+  mutate(avg_rel_revision = percent(avg_rel_revision, accuracy = 0.001)) |>
+  kable(
+    caption = "Average Relative CES Revision (1979–2025)",
+    col.names = c("Avg. Revision as % of Payroll Level"),
+    align = "c"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3")
+```
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+ces_full |>
+  arrange(desc(rel_revision_level)) |>         # <-- Sort by relative revision descending
+  slice_head(n = 10) |>                        # Take top 10 after sorting
+  mutate(
+    Row = row_number(),
+    level_fmt        = format(level, big.mark = ","),
+    original_fmt     = format(original, big.mark = ","),
+    final_fmt        = format(final, big.mark = ","),
+    revision_fmt     = format(revision, big.mark = ","),
+    abs_revision_fmt = format(abs_revision, big.mark = ","),
+    rel_revision_level_fmt = scales::percent(rel_revision_level, accuracy = 0.01)
+  ) |>
+  select(
+    Row, date, decade, level_fmt, original_fmt, final_fmt, revision_fmt,
+    abs_revision_fmt, rel_revision_level_fmt
+  ) |>
+  kable(
+    col.names = c(
+      "Row", "Date", "Decade", "Employment Level", "Original", "Final", "Revision",
+      "Abs Revision", "Revision % of Level"
+    ),
+    align = c("c","c","r","r","r","r","r","r","c"),
+    caption = "Top 10 Rows Sorted by Relative Revision Magnitude (`ces_full`)"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = TRUE,
+    position   = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3") |>  
+  row_spec(1, bold = TRUE, color = "white", background = "#007bff")
+
+```
+
+
+::: {.callout-note title="Findings"}
+This chart shows the long-run trajectory of U.S. payroll employment alongside shaded recession periods. Employment rises steadily across decades, interrupted only by major economic downturns. The most dramatic break in the series occurs in **April 2020,** when payrolls collapsed to **130.4 million,** the sharpest and fastest job loss in modern U.S. history. Unlike earlier recessions—such as 1981–82, 2001, or 2008—the COVID crash is both **larger in magnitude and nearly instantaneous,** reflecting the unprecedented shutdown of the economy. Employment quickly begins recovering afterward, but the scale of the drop highlights how extraordinary the shock was compared with all prior recessions in the past 45 years.
+:::
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+
+
+# 1. Recession dates (NBER-style)
+recessions <- tibble(
+  start = as.Date(c("1980-01-01","1981-07-01","1990-07-01",
+                    "2001-03-01","2007-12-01","2020-02-01")),
+  end   = as.Date(c("1980-07-01","1982-11-01","1991-03-01",
+                    "2001-11-01","2009-06-01","2020-04-01"))
+)
+
+# 2. Find the COVID crash low point (early 2020)
+covid_point <- ces_full |>
+  filter(date >= as.Date("2020-02-01"),
+         date <= as.Date("2020-09-01")) |>
+  slice_min(level, n = 1)
+
+# 3. Plot: recessions + employment + COVID annotation
+ggplot() +
+  # shaded recessions
+  geom_rect(
+    data = recessions,
+    aes(xmin = start, xmax = end, ymin = -Inf, ymax = Inf),
+    inherit.aes = FALSE,
+    fill = "gray85",
+    alpha = 0.7
+  ) +
+  # employment line
+  geom_line(
+    data = ces_full,
+    aes(x = date, y = level),
+    color = "#2a5674",
+    size = 1.1
+  ) +
+  # COVID crash point
+  geom_point(
+    data = covid_point,
+    aes(x = date, y = level),
+    color = "#e31a1c",
+    size = 3
+  ) +
+  geom_label(
+    data = covid_point,
+    aes(
+      x = date,
+      y = level,
+      label = paste0(
+      "COVID crash:\n",
+      format(date, "%b %Y"), " (",
+      scales::number(level * 1000, scale = 1e-6, accuracy = 0.1), "M)"
+      )
+    ),
+    nudge_y   = 8000,
+    label.size = 0.2,
+    size      = 3.3,
+    color     = "black",
+    fill      = "white"
+  ) +
+  labs(
+    title    = "Total Nonfarm Payroll Employment (1979–2025)",
+    subtitle = "Shaded NBER recessions and annotated COVID-19 employment collapse",
+    x        = NULL,
+    y        = "Employment Level (thousands)",
+    caption  = "Source: Bureau of Labor Statistics, CES series CES0000000001"
+  ) +
+  scale_y_continuous(labels = comma) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title        = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle     = element_text(size = 12, hjust = 0.5, color = "gray30"),
+    plot.caption      = element_text(size = 9, color = "gray40"),
+    panel.grid.minor  = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.title.y      = element_text(margin = margin(r = 10)),
+    axis.text         = element_text(color = "gray20")
+  )
+```
+
+
+### 5. Seasonal and Monthly Patterns in CES Revisions
+
+#### Monthly Patterns
+
+
+::: {.callout-note title="Findings"}
+The table of monthly median revisions shows a clear ranking:
+- **September has the largest typical revisions** (median ~57k), followed by **August, April, and March.**
+- The **smallest revisions occur in January and December**, with medians near the low 30k range.
+
+This pattern suggests that **late-summer and early-fall months are structurally more prone to estimation noise**, while **winter months tend to be more stable.**
+
+The boxplot confirms this:
+- **September, April, and August** show taller boxes and wider IQRs, meaning **higher variability.**
+- **January and December** are the most tightly distributed → **lowest uncertainty.**
+:::
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+ces_full |>
+  group_by(month_name) |>
+  summarise(avg_rev = mean(revision))
+
+# Compute monthly revision statistics
+monthly_revision_stats <- ces_full |>
+  mutate(
+    month = month(date, label = TRUE, abbr = TRUE),
+    abs_rev = abs(revision)
+  ) |>
+  group_by(month) |>
+  summarise(
+    median_abs_rev = median(abs_rev, na.rm = TRUE),
+    mean_abs_rev   = mean(abs_rev,   na.rm = TRUE),
+    iqr_abs_rev    = IQR(abs_rev,    na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(desc(median_abs_rev)) |>
+  mutate(Rank = row_number())
+
+# Produce table with consistent coloring
+seasonality_table <- monthly_revision_stats |>
+  mutate(
+    median_abs_rev = round(median_abs_rev, 1),
+    mean_abs_rev   = round(mean_abs_rev,   1),
+    iqr_abs_rev    = round(iqr_abs_rev,    1)
+  ) |>
+  select(
+    Month = month,
+    `Median Revision` = median_abs_rev,
+    `Mean Revision`   = mean_abs_rev,
+    `IQR (Variability)` = iqr_abs_rev,
+    Rank
+  ) |>
+  kable(
+    align   = c("c", "r", "r", "r", "c"),
+    caption = "Monthly Revision Statistics: Ranked by Median Absolute Revision"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position   = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3")
+
+seasonality_table
+```
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+ggplot(ces_full, aes(date, revision)) +
+  geom_col() +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Monthly CES Revisions",
+       y = "Revision (Final - Original)")
+
+
+# Recession bands (same as employment figure)
+recessions <- tibble(
+  start = as.Date(c("1980-01-01","1981-07-01","1990-07-01",
+                    "2001-03-01","2007-12-01","2020-02-01")),
+  end   = as.Date(c("1980-07-01","1982-11-01","1991-03-01",
+                    "2001-11-01","2009-06-01","2020-04-01"))
+)
+
+# Add sign for coloring
+ces_revisions_plot <- ces_full |>
+  mutate(
+    sign = if_else(revision >= 0, "Upward", "Downward")
+  )
+
+ggplot() +
+  # shaded recessions
+  geom_rect(
+    data = recessions,
+    aes(xmin = start, xmax = end, ymin = -Inf, ymax = Inf),
+    inherit.aes = FALSE,
+    fill = "gray90",
+    alpha = 0.7
+  ) +
+  # revisions as colored bars
+  geom_col(
+    data = ces_revisions_plot,
+    aes(x = date, y = revision, fill = sign),
+    width = 25    # narrower than full month to reduce overlap
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray30") +
+  scale_fill_manual(
+    values = c("Upward" = "#2ca25f",  # green
+               "Downward" = "#e31a1c"),
+    name = NULL
+  ) +
+  labs(
+    title    = "Monthly CES Revisions (1979–2025)",
+    subtitle = "Upward revisions in green, downward revisions in red; shaded areas show NBER recessions",
+    x        = NULL,
+    y        = "Revision (Final – Original, thousands of jobs)",
+    caption  = "Source: Bureau of Labor Statistics, CES revisions for total nonfarm payroll"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title        = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle     = element_text(size = 12, hjust = 0.5, color = "gray30"),
+    plot.caption      = element_text(size = 9, color = "gray40"),
+    panel.grid.minor  = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.title.y      = element_text(margin = margin(r = 10)),
+    axis.text         = element_text(color = "gray20"),
+    legend.position   = "top"
+  )
+```
+
+#### Seasonal Patterns
+
+::: {.callout-note title="Findings"}
+By grouping months into seasons:
+- **Spring shows the largest median revisions** (46k) and highest mean revisions.
+- **Fall is next**, followed by Summer, while
+- **Winter has the smallest revisions** (median 37k and lowest variability).
+
+This indicates that the **CES estimation process is most volatile from March–May, with a secondary peak in late summer/early fall.**
+
+Likely contributors include:
+- seasonal hiring patterns
+- reporting lags early in the year
+- variability in school-related and summer employment cycles
+
+**Summary**
+- **Revisions are not random**—they are higher in Spring and Fall, and lower in Winter.
+- Specific months—**September, August, April, and March**—consistently produce the **largest adjustments.**
+- **January and December** are the most stable months.
+- Overall volatility has declined after 2000, but **seasonality remains a defining feature** of CES revision behavior.
+:::
+
+```{r}
+# 1. Add season + absolute revision
+seasonal_stats <- ces_full |>
+  mutate(
+    month_num = month(date),
+    season = case_when(
+      month_num %in% c(12, 1, 2) ~ "Winter",
+      month_num %in% 3:5         ~ "Spring",
+      month_num %in% 6:8         ~ "Summer",
+      month_num %in% 9:11        ~ "Fall"
+    ),
+    season = factor(season, levels = c("Winter", "Spring", "Summer", "Fall")),
+    abs_rev = abs(revision)
+  ) |>
+  group_by(season) |>
+  summarise(
+    median_abs_rev = median(abs_rev, na.rm = TRUE),
+    mean_abs_rev   = mean(abs_rev,   na.rm = TRUE),
+    iqr_abs_rev    = IQR(abs_rev,    na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(desc(median_abs_rev)) |>
+  mutate(Rank = row_number())
+
+# 2. Nicely formatted seasonal table
+seasonal_table <- seasonal_stats |>
+  mutate(
+    median_abs_rev = round(median_abs_rev, 1),
+    mean_abs_rev   = round(mean_abs_rev,   1),
+    iqr_abs_rev    = round(iqr_abs_rev,    1)
+  ) |>
+  select(
+    Season = season,
+    `Median Revision`   = median_abs_rev,
+    `Mean Revision`     = mean_abs_rev,
+    `IQR (Variability)` = iqr_abs_rev,
+    Rank
+  ) |>
+  kable(
+    align   = c("c", "r", "r", "r", "c"),
+    caption = "Seasonal Revision Statistics: Ranked by Median Absolute Revision"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position   = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3")
+
+seasonal_table
+```
+
+```{r}
+ces_full |>
+  mutate(
+    month_num = month(date),
+    month     = month(date, label = TRUE),
+    season = case_when(
+      month_num %in% c(12, 1, 2) ~ "Winter",
+      month_num %in% 3:5         ~ "Spring",
+      month_num %in% 6:8         ~ "Summer",
+      month_num %in% 9:11        ~ "Fall"
+    ),
+    season = factor(season, levels = c("Winter", "Spring", "Summer", "Fall"))
+  ) |>
+  # remove the single huge negative outlier
+  filter(revision > -500) |>
+  ggplot(aes(x = month, y = revision, fill = season)) +
+  geom_boxplot() +
+  coord_cartesian(ylim = c(-300, 350)) +   # keeps focus around 0, hides tails
+  scale_fill_manual(
+    values = c(
+      "Winter" = "#6baed6",  # blue
+      "Spring" = "#74c476",  # green
+      "Summer" = "#fd8d3c",  # orange
+      "Fall"   = "#9e9ac8"   # purple
+    ),
+    name = "Season"
+  ) +
+  labs(
+    title = "Monthly Seasonality of CES Revisions",
+    y     = "Revision (thousands of jobs)",
+    x     = "Month"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    legend.position = "top"
+  )
+```
+
+::: {.callout-note title="Findings"}
+A simple comparison shows:
+
+- **Pre-2000 mean revision: ~15k**
+- **Post-2000 mean revision: ~8.6k**
+
+This confirms that methodological improvements and better sampling have reduced revision noise over time, even though seasonal patterns still persist.
+:::
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+ces_full |>
+  mutate(period = if_else(year < 2000, "pre2000", "post2000")) |>
+  group_by(period) |>
+  summarise(mean_revision = round(mean(revision), 2)) |>
+  kable(
+    col.names = c("Period", "Mean Revision (thousands of jobs)"),
+    caption = "Average CES Payroll Revision: Pre-2000 vs Post-2000"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3")
+```
+
+### 6. Average CES Revision Size Over 45 Years
+
+::: {.callout-note title="Findings"}
+
+**1. Typical Revision Size**
+- Mean Absolute Revision: 56.8K jobs
+- Median Absolute Revision: 42.0K jobs
+
+This means that in a typical month, the CES report is later revised by **40–60 thousand jobs**, even though total payroll employment is over **150 million.** In other words, **most revisions are small in context**, even if they occasionally spike.
+
+**2. Distribution and Extremes**
+- **Middle 50% of revisions** fall between **18.5K and 71K jobs**
+- **Largest revision on record: 672K jobs** (March 2020, COVID shock)
+- **Smallest revisions are near 0**, indicating highly accurate initial estimates in stable periods.
+
+The distribution is **right-tailed**, meaning large extreme revisions occur but are rare.
+
+**3. Long-Run Trend in Revision Size (Relative to Employment)**
+LOESS visualization shows:
+- Revisions were **much larger relative to payroll levels in the 1970s–1980s**, often exceeding **0.1%** of the workforce.
+- From the **1990s through mid-2010s**, revisions stabilized around **0.03%–0.06%**, reflecting better sampling + data methods.
+- A **sharp spike in 2020** corresponds to pandemic labor market chaos.
+- Post-2020 revisions have increased somewhat but remain below early-historical levels.
+
+**Data quality and estimation accuracy have improved significantly over time**, except during crisis periods.
+
+**📌 Final Takeaway**
+On average, CES payroll revisions are small—typically 40–60K jobs—but they can spike dramatically during economic disruptions. Over the past 45 years, revisions as a share of total payroll employment have fallen substantially, reflecting improvements in statistical methodology. The only major exception is the COVID-19 period, which produced the largest relative and absolute revisions in modern history.
+:::
+
+```{r}
+# Overall absolute revision distribution
+revision_summary <- ces_full |>
+  summarise(
+    Total_Observations      = sum(!is.na(revision)),
+    Mean_Absolute_Revision  = mean(abs_revision, na.rm = TRUE),
+    Median_Absolute_Revision= median(abs_revision, na.rm = TRUE),
+    P25_Absolute_Revision   = quantile(abs_revision, 0.25, na.rm = TRUE),
+    P75_Absolute_Revision   = quantile(abs_revision, 0.75, na.rm = TRUE),
+    Minimum_Revision        = min(abs_revision, na.rm = TRUE),
+    Maximum_Revision        = max(abs_revision, na.rm = TRUE),
+    Std_Dev_Signed_Revision = sd(revision, na.rm = TRUE)
+  ) |>
+  tidyr::pivot_longer(
+    everything(),
+    names_to  = "Statistic",
+    values_to = "Value"
+  ) |>
+  mutate(
+    Statistic = dplyr::recode(
+      Statistic,
+      Total_Observations       = "Total Observations",
+      Mean_Absolute_Revision   = "Mean Absolute Revision",
+      Median_Absolute_Revision = "Median Absolute Revision",
+      P25_Absolute_Revision    = "25th Percentile (Abs Revision)",
+      P75_Absolute_Revision    = "75th Percentile (Abs Revision)",
+      Minimum_Revision         = "Minimum (Abs Revision)",
+      Maximum_Revision         = "Maximum (Abs Revision)",
+      Std_Dev_Signed_Revision  = "Std. Dev. of Signed Revision"
+    ),
+    Value = dplyr::case_when(
+      Statistic == "Total Observations" ~ format(round(Value, 0), big.mark = ","),
+      TRUE ~ paste0(sprintf("%.1f", Value), "K jobs")
+    )
+  )
+
+revision_summary |>
+  kable(
+    caption   = "Overall Distribution of CES Payroll Revisions (Absolute Terms)",
+    col.names = c("Statistic", "Value"),
+    align     = c("l", "r")
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE,
+    position          = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3") |>
+  row_spec(2:3, bold = TRUE, background = "#E8F4F8")
+
+```
+
+
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+# Recession dates (same as employment plot)
+recessions <- tibble(
+  start = as.Date(c("1980-01-01","1981-07-01","1990-07-01",
+                    "2001-03-01","2007-12-01","2020-02-01")),
+  end   = as.Date(c("1980-07-01","1982-11-01","1991-03-01",
+                    "2001-11-01","2009-06-01","2020-04-01"))
+)
+
+# Add relative % revision
+ces_rel <- ces_full |>
+  mutate(rel_pct = rel_revision_level * 100)
+
+ggplot() +
+  # 1) shaded recessions
+  geom_rect(
+    data = recessions,
+    aes(xmin = start, xmax = end, ymin = -Inf, ymax = Inf),
+    inherit.aes = FALSE,
+    fill = "gray90",
+    alpha = 0.8
+  ) +
+  # 2) raw noisy line (light)
+  geom_line(
+    data = ces_rel,
+    aes(x = date, y = rel_pct),
+    color = "gray70",
+    size  = 0.4
+  ) +
+  # 3) smoothed trend (what we care about)
+  geom_smooth(
+    data = ces_rel,
+    aes(x = date, y = rel_pct),
+    method = "loess",
+    span   = 0.2,
+    se     = FALSE,
+    color  = "#08519c",
+    size   = 1.1
+  ) +
+  labs(
+    title    = "Relative Size of CES Revisions Over Time",
+    subtitle = "12-month LOESS trend of revision magnitude as a % of total payroll employment\nShaded areas show NBER recessions",
+    x        = NULL,
+    y        = "Revision as % of Payroll Level",
+    caption  = "Source: Bureau of Labor Statistics, CES revisions for total nonfarm payroll"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title        = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle     = element_text(size = 11, hjust = 0.5, color = "gray30"),
+    plot.caption      = element_text(size = 9, color = "gray40"),
+    panel.grid.minor  = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.title.y      = element_text(margin = margin(r = 10)),
+    axis.text         = element_text(color = "gray20")
+  )
+```
+
+## ⭐ T1: Statistical Inference
+
+### 🔍 Test 1: Is the Average CES Revision Significantly Different From Zero?
+
+::: {.callout-note title="Hypotheses"}
+- **H₀:** p(negative revision, post-2000) = p(negative revision, pre-2000)
+- **H₁:** p(negative revision, post-2000) ≠ p(negative revision, pre-2000)
+
+The chi-square test comparing pre-2000 and post-2000 negative revision rates finds:
+
+**- χ² = 0.679,**
+**- p = 0.410,**
+**- 95% CI for difference = [-0.124, 0.048].**
+
+Because the p-value is far above 0.05 and the confidence interval includes 0, we find **no statistically significant change** in the proportion of negative revisions after 2000.
+
+In other words:
+**The fraction of months with negative CES revisions did not meaningfully increase (or decrease) post-2000.** 
+Any observed difference is small and well within normal sampling variation.
+
+:::
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+library(infer)
+library(kableExtra)
+library(dplyr)
+
+
+ces_neg <- ces_full |>
+  mutate(
+    period     = if_else(year < 2000, "pre2000", "post2000"),
+    is_negative = revision < 0   # TRUE/FALSE
+  ) |>
+  filter(!is.na(revision))
+
+neg_test <- ces_neg |>
+  prop_test(is_negative ~ period,
+            order = c("pre2000", "post2000"))
+
+neg_test |>
+  transmute(
+    `Chi-square Statistic` = round(statistic, 3),
+    `df`                   = chisq_df,
+    `p-value`              = signif(p_value, 3),
+    `Alternative`          = alternative
+  ) |>
+  kable(
+    caption   = "Test 1: Has the Fraction of Negative CES Revisions Changed Post-2000?",
+    align     = c("c", "c", "c", "c")
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE,
+    position          = "center"
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = "#0056b3")
+
+```
+
+### 🔍 Test 2: Has the fraction of revisions > 1% of payroll level increased post-2020?
+
+::: {.callout-note title="Hypotheses"}
+- **H₀:** p(|revision| > 1% of level, post-2020) = p(|revision| > 1% of level, pre-2020)
+- **H₁:** p(|revision| > 1% of level, post-2020) > p(|revision| > 1% of level, pre-2020)
+(one-sided, because we care if they **increased**)
+
+:::
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+library(infer)
+
+library(dplyr)
+library(infer)
+
+ces_big <- ces_full |>
+  filter(!is.na(rel_revision_level)) |>
+  mutate(
+    period_2020 = if_else(year >= 2020, "post2020", "pre2020"),
+    # Example: use 0.005 (0.5%) instead of 0.01
+    big_flag    = if_else(abs(rel_revision_level) > 0.005, "big", "not_big")
+  )
+
+count(ces_big, big_flag)
+
+ces_big <- ces_full |>
+  filter(!is.na(rel_revision_level)) |>
+  mutate(
+    period_2020 = if_else(year >= 2020, "post2020", "pre2020"),
+    big_rel_rev = abs(rel_revision_level) > 0.005
+  )
+
+ces_big |>
+  specify(big_rel_rev ~ period_2020, success = TRUE) |>
+  hypothesize(null = "independence") |>
+  prop_test(
+    alternative = "greater",
+    order       = c("post2020", "pre2020")
+  )
+```
+
+### 🔍 Test 3: Is the average revision significantly different from zero?
+
+::: {.callout-note title="Hypotheses"}
+- **H₀:** μ_revision = 0
+- **H₁:** μ_revision ≠ 0
+(one-sample t-test)
+
+Because the p-value (0.001) is far below the 0.05 threshold, we reject the null hypothesis that **the average revision is zero.**
+- The **average CES revision is +11.5k jobs**, not zero.
+- The confidence interval **does not include 0**, ranging from **+4.6k to +18.4k**, meaning revisions are consistently **positive on average.**
+- This aligns with earlier descriptive findings (mean absolute revision ≈ 56.8k, median ≈ 42k), but importantly:
+**the signed revision tilts upward**, meaning the BLS tends to revise jobs upward more than downward on average.
+
+**CES revisions are not centered around zero — the BLS tends to initially underreport employment.**
+On average, final estimates end up **about 11,000 jobs higher** than the first print.
+:::
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+mean_rev_test <- t_test(
+  ces_full,
+  response = revision,
+  mu       = 0
+)
+
+mean_rev_test
+```
+
+### 🔍 Test 4: Has the average revision increased post-2020?
+
+::: {.callout-note title="Hypotheses"}
+- **H₀:** μ_pre2020 = μ_post2020
+- **H₁:** μ_post2020 ≠ μ_pre2020 (or “>” if you specifically want “increased”)
+
+The p-value (**0.48**) is far above 0.05, meaning **we cannot reject the null hypothesis.**
+There is **no statistically significant evidence** that average revisions increased after 2020.
+
+Even though the point estimate suggests revisions might be ~12.5k larger post-2020, the confidence interval:
+- ranges from **−22.5k** (possibly lower post-2020)
+- to **+47.6k** (possibly higher post-2020)
+
+Because the interval **includes zero**, the difference is **not statistically meaningful.**
+
+**Revisions did not significantly increase after 2020.**
+The data are too noisy, and the confidence interval is wide, so we can’t conclude that pandemic-era revisions are truly larger on average.
+:::
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+ces_mean_2020 <- ces_full |>
+    mutate(period_2020 = if_else(year >= 2020, "post2020", "pre2020")) |>
+    filter(!is.na(revision))
+
+mean_2020_test <- t_test(
+    ces_mean_2020,
+    revision ~ period_2020,
+    alternative = "two_sided",
+    order       = c("pre2020", "post2020")
+)
+
+mean_2020_test
+```
+
+
+### 🔍 Test 5: Are revisions larger when the underlying change in employment is larger?
+
+::: {.callout-note title="Hypotheses"}
+- **H₀:** Mean |revision| is the same for “large” and “normal” level changes
+- **H₁:** Mean |revision| is larger when the level change is “large”
+
+The p-value (**0.044**) is below 0.05, so we reject the null hypothesis.
+There is statistically significant evidence that:
+**Absolute CES revisions are larger in months when the underlying change in employment is larger.**
+
+The estimated effect size shows:
+- Months with large underlying employment movements have revisions that are, on average,
+**~9,000 jobs larger.**
+- The one-sided confidence interval starts at **+334 jobs**, meaning the difference is positive with 95% confidence.
+
+**When employment shifts sharply—big expansions or contractions—the BLS revisions tend to be larger.**
+This makes sense: rapidly changing labor markets are harder to measure in real time, increasing initial estimation error and leading to bigger revisions later.
+
+:::
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+ces_change <- ces_full |>
+    arrange(date) |>
+    mutate(
+        level_change = level - dplyr::lag(level),
+        big_change   = abs(level_change) > median(abs(level_change), na.rm = TRUE)
+    ) |>
+    filter(!is.na(level_change), !is.na(abs_revision))
+
+big_change_test <- t_test(
+    ces_change,
+    abs_revision ~ big_change,
+    alternative = "greater",
+    order       = c(TRUE, FALSE)   # mean(abs_revision | big_change=TRUE) > mean(abs_revision | FALSE)?
+)
+
+big_change_test
+```
+
+
