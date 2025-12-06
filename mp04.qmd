@@ -25,7 +25,7 @@ format:
     self-contained: false
 
 ---
-![](Jobs_Report_Desktop-500x330.jpg)
+![](Newsletter-1080x675.jpg)
 
 ## Introduction
 
