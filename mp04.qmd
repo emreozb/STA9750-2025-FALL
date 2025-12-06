@@ -2,9 +2,9 @@
 project:
   type: website
   output-dir: docs
-title: "Branches of Insight: Mapping the Health of New York’s Trees"
+title: "Truth in the Numbers: A 45-Year Analysis of BLS Payroll Revisions"
 website:
-  title: "Branches of Insight: Mapping the Health of New York’s Trees"
+  title: "Truth in the Numbers: A 45-Year Analysis of BLS Payroll Revisions"
   navbar:
     search: true        # shows the search box in the header
   pdf:
@@ -25,7 +25,7 @@ format:
     self-contained: false
 
 ---
-
+![](Jobs_Report_Desktop-500x330.jpg)
 
 ## Introduction
 
@@ -86,6 +86,7 @@ suppressPackageStartupMessages({
   library(rvest)
   library(sf)
   library(kableExtra)
+  library(scales)  
 })
 
 get_ces_levels <- function() {
@@ -442,7 +443,9 @@ overall_revision_stats |>
   row_spec(0, bold = TRUE, color = "white", background = "#0056b3")
 ```
 ```{r}
-
+#| code-fold: true
+#| message: false
+#| warning: false
 payroll_revisions_data <- ces_full |>
   arrange(date) |> 
   mutate(
@@ -517,6 +520,9 @@ largest_revisions_table |>
 
 ```
 ```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
 top_pos <- ces_full |>
   arrange(desc(revision)) |>
   slice_head(n = 10) |>
@@ -637,6 +643,9 @@ positive_by_decade |>
 ```
 
 ```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
 decade_summary <- ces_full |>
   filter(!is.na(revision)) |>
   mutate(is_negative = revision < 0) |>
@@ -687,6 +696,9 @@ The 2020s show a temporary spike back upward (86k), driven almost entirely by th
 :::
 
 ```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
 revision_magnitude <- ces_full |>
   filter(!is.na(abs_revision)) |>
   group_by(decade) |>
@@ -908,9 +920,9 @@ The boxplot confirms this:
 #| message: false
 #| warning: false
 
-ces_full |>
-  group_by(month_name) |>
-  summarise(avg_rev = mean(revision))
+# ces_full |>
+#   group_by(month_name) |>
+#   summarise(avg_rev = mean(revision))
 
 # Compute monthly revision statistics
 monthly_revision_stats <- ces_full |>
@@ -960,12 +972,6 @@ seasonality_table
 #| code-fold: true
 #| message: false
 #| warning: false
-
-ggplot(ces_full, aes(date, revision)) +
-  geom_col() +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  labs(title = "Monthly CES Revisions",
-       y = "Revision (Final - Original)")
 
 
 # Recession bands (same as employment figure)
@@ -1046,6 +1052,9 @@ Likely contributors include:
 :::
 
 ```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
 # 1. Add season + absolute revision
 seasonal_stats <- ces_full |>
   mutate(
@@ -1098,6 +1107,9 @@ seasonal_table
 ```
 
 ```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
 ces_full |>
   mutate(
     month_num = month(date),
@@ -1197,6 +1209,9 @@ On average, CES payroll revisions are small—typically 40–60K jobs—but they
 :::
 
 ```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
 # Overall absolute revision distribution
 revision_summary <- ces_full |>
   summarise(
@@ -1312,7 +1327,7 @@ ggplot() +
   )
 ```
 
-## ⭐ T1: Statistical Inference
+## ⭐ T4: Statistical Inference
 
 ### 🔍 Test 1: Is the Average CES Revision Significantly Different From Zero?
 
@@ -1355,24 +1370,7 @@ neg_test <- ces_neg |>
   prop_test(is_negative ~ period,
             order = c("pre2000", "post2000"))
 
-neg_test |>
-  transmute(
-    `Chi-square Statistic` = round(statistic, 3),
-    `df`                   = chisq_df,
-    `p-value`              = signif(p_value, 3),
-    `Alternative`          = alternative
-  ) |>
-  kable(
-    caption   = "Test 1: Has the Fraction of Negative CES Revisions Changed Post-2000?",
-    align     = c("c", "c", "c", "c")
-  ) |>
-  kable_styling(
-    bootstrap_options = c("striped", "hover", "condensed"),
-    full_width        = FALSE,
-    position          = "center"
-  ) |>
-  row_spec(0, bold = TRUE, color = "white", background = "#0056b3")
-
+neg_test
 ```
 
 ### 🔍 Test 2: Has the fraction of revisions > 1% of payroll level increased post-2020?
@@ -1392,32 +1390,44 @@ neg_test |>
 library(infer)
 
 library(dplyr)
-library(infer)
 
 ces_big <- ces_full |>
-  filter(!is.na(rel_revision_level)) |>
   mutate(
     period_2020 = if_else(year >= 2020, "post2020", "pre2020"),
-    # Example: use 0.005 (0.5%) instead of 0.01
-    big_flag    = if_else(abs(rel_revision_level) > 0.005, "big", "not_big")
-  )
-
-count(ces_big, big_flag)
-
-ces_big <- ces_full |>
-  filter(!is.na(rel_revision_level)) |>
-  mutate(
-    period_2020 = if_else(year >= 2020, "post2020", "pre2020"),
-    big_rel_rev = abs(rel_revision_level) > 0.005
+    big_rel_rev = abs(rel_revision_level) > 0.01   # > 1% of level
   )
 
 ces_big |>
-  specify(big_rel_rev ~ period_2020, success = TRUE) |>
-  hypothesize(null = "independence") |>
-  prop_test(
-    alternative = "greater",
-    order       = c("post2020", "pre2020")
+  group_by(period_2020) |>
+  summarise(
+    n       = n(),
+    n_big   = sum(big_rel_rev),
+    pct_big = mean(big_rel_rev) * 100
   )
+
+ces_big <- ces_full |>
+  mutate(
+    period_2020 = if_else(year >= 2020, "post2020", "pre2020"),
+    big_rel_rev = abs(rel_revision_level) > 0.002   # 0.2% of level
+  )
+
+ces_big |>
+  group_by(period_2020) |>
+  summarise(
+    n       = n(),
+    n_big   = sum(big_rel_rev),
+    pct_big = mean(big_rel_rev) * 100
+  ) 
+
+big_rel_test <- prop_test(
+    ces_big,
+    big_rel_rev ~ period_2020,
+    alternative = "greater",
+    order       = c("post2020", "pre2020"),
+    success     = "TRUE"   # Use "TRUE" for logical/boolean columns
+)
+
+big_rel_test
 ```
 
 ### 🔍 Test 3: Is the average revision significantly different from zero?
@@ -1504,7 +1514,6 @@ The estimated effect size shows:
 
 **When employment shifts sharply—big expansions or contractions—the BLS revisions tend to be larger.**
 This makes sense: rapidly changing labor markets are harder to measure in real time, increasing initial estimation error and leading to bigger revisions later.
-
 :::
 
 ```{r}
@@ -1529,4 +1538,450 @@ big_change_test <- t_test(
 big_change_test
 ```
 
+## ✅ T5: Fact Checks of Claims about CES Revisions and the Firing of Commissioner McEntarfer  
 
+### Fact Check #1 – Donald Trump: “The jobs numbers were RIGGED and FAKED to hurt Republicans.”
+
+Former President Donald Trump publicly claimed that the July employment report was **“RIGGED”** and that Commissioner Erika McEntarfer **“faked”** the statistics to make Republicans “look bad.” This framing asserts deliberate manipulation inside the Bureau of Labor Statistics (BLS) and implies that CES employment estimates were intentionally overstated and then quietly revised downward as part of a political agenda.
+
+::: {.callout-note title="The Claim"}
+> “The latest jobs report was RIGGED and the numbers were faked to hurt Republicans. The BLS, under Commissioner Erika McEntarfer, was manipulating CES job numbers and then quietly revising them later.”
+:::
+
+#### What the claim would imply in the data
+
+If this were true, the CES data during McEntarfer’s tenure would show:
+
+- **Systematically negative revisions** (initial numbers too high, later revised down).  
+- **Unusually large revisions**, far outside the historical pattern.  
+- A clear **break from pre-2020 behavior** in the revision series.
+
+#### What the CES data actually show
+
+Using the merged dataset `ces_full`, the sample is split into **pre-2020** and **post-2020** periods:
+
+- **Pre-2020 (1979–2019):**  
+  - Mean revision: **+12.98k** jobs  
+  - Median revision: **+11k**  
+  - Standard deviation: **71.9k**  
+  - Observations: **492** months  
+
+- **Post-2020 (2020–2025):**  
+  - Mean revision: **+0.43k** jobs (about **400** jobs)  
+  - Median revision: **−4k**  
+  - Standard deviation: **141.4k**  
+  - Observations: **67** months  
+
+Even in the post-2020 period, the **average revision is essentially zero and slightly positive**, not a large, systematic downward correction. If the numbers were being “rigged” upward and then revised down, a clearly negative mean revision under McEntarfer would be expected. Instead, the pre-2020 era actually has a **higher** average revision (+13k) than the post-2020 period (+0.4k).
+
+A **“large relative revision”** is defined as one where the absolute revision exceeds **0.2% of the employment level** (|revision| / level > 0.002). Under that definition:
+
+- **Pre-2020:** 9 out of 492 months (**1.83%**) are “large” relative revisions.  
+- **Post-2020:** 3 out of 67 months (**4.48%**) are “large” relative revisions.  
+
+The post-2020 period therefore has a slightly **higher share of large revisions** (about **2.6 percentage points more**), but the absolute number of such months is tiny (3) and dominated by the unprecedented COVID shock, not by ordinary months under McEntarfer.
+
+Two earlier visualizations reinforce this:
+
+- The **time-series of monthly revisions** (with recession shading) shows large positive and negative revisions scattered throughout the last 45 years, long before McEntarfer. The post-2020 period is volatile, but it resembles earlier recessions more than a new pattern of rigging.  
+- The **bar chart of the top 10 positive and negative revisions** shows that several extreme revisions occur in the early 1980s and during COVID, again emphasizing economic turmoil rather than recent political interference.
+
+#### Hypothesis test: are revisions different after 2020?
+
+To formally test whether average revisions changed after 2020, a two-sample t-test compares revisions in the pre-2020 and post-2020 periods:
+
+- **H₀:** μ_pre2020 = μ_post2020  
+- **H₁:** μ_pre2020 ≠ μ_post2020  
+
+The test yields:
+
+- t-statistic: **0.71**  
+- Degrees of freedom: **≈ 70.7**  
+- **p-value: 0.48**  
+- Estimated difference (pre-2020 − post-2020): **+12.55k**  
+- 95% CI for the difference: **[−22.49k, +47.58k]**
+
+Statistically, there is **no evidence** that revisions in the McEntarfer period are larger, more negative, or otherwise dramatically different from the historical pattern. The pre-2020 period has a higher average revision, but the difference is small and not significant.
+
+Combined with the fact that the **overall average revision** over 1979–2025 is small and positive (around **+11k** jobs, from the earlier one-sample t-test), the data suggest a mild long-run tendency for **upward revisions**, not the downward manipulation implied by “rigged” numbers.
+
+#### Ruling (Politifact scale): **Pants-on-Fire**
+
+The claim that Commissioner McEntarfer “faked” or “rigged” the CES numbers to hurt Republicans is **directly contradicted** by the data:
+
+- The average revision under McEntarfer is essentially zero and slightly positive.  
+- The historical pattern shows revisions in **both directions** across all decades.  
+- The post-2020 volatility is explained by the COVID shock, not by a partisan break in the series.
+
+There is no statistical evidence of a new downward bias, let alone a politically motivated “rigging” of the jobs numbers.
+
+> **Verdict:** **Pants-on-Fire.**
+
+---
+
+### Fact Check #2 – Commentators: “The huge benchmark revision proves the BLS is failing and the CES can’t be trusted.”
+
+Some commentators have argued that the recent large downward revision to payrolls proves that the BLS **“no longer knows how to measure jobs”** and that the employment data are now so inaccurate that the CES **“can’t be trusted.”** This claim interprets the high-profile revision as evidence of systemic failure in the BLS estimation process.
+
+::: {.callout-note title="The Claim"}
+> “The latest benchmark revision shows the BLS overstated job growth by hundreds of thousands of jobs. That proves the jobs data are broken and the CES can’t be trusted anymore.”
+:::
+
+#### What the claim would imply
+
+If the CES really could not be trusted, the data would show:
+
+- Benchmark revisions that are **much larger** than in earlier decades, not just in a single year but persistently.  
+- A sharp increase in the **typical size** (mean absolute value) of monthly revisions.  
+- Revisions that are **large relative to the overall employment level**, not just big in raw numbers.
+
+#### What the CES data actually show
+
+First, consider the **scale** of the labor market. In the latest observation in the dataset, total nonfarm employment is about:
+
+- **159,511 thousand jobs (~159.5 million workers).**
+
+Now consider the **largest single revision** in the entire 1979–2025 sample:
+
+- Date: **March 2020**  
+- Original estimate: **−701k** jobs  
+- Final estimate: **−1,373k** jobs  
+- Revision: **−672k** jobs  
+
+Relative to the employment level at that time (**150,895k**), this revision equals:
+
+- **672,000 / 150,895,000 ≈ 0.45%** of total payroll employment.
+
+In absolute terms, a revision of **672k jobs** is huge and rightly attracted attention—but as a **share of the workforce**, it is **less than half of one percent**. That is not trivial, but it is also far from suggesting that the data are “meaningless.”
+
+Across the whole 1979–2025 period, the **average relative revision** is even smaller:
+
+- Mean `rel_revision_level`: **0.0004828**, which is  
+- About **0.048% of payroll employment** on average.
+
+In a typical month, revisions therefore correspond to **less than five-hundredths of one percent** of total employment.
+
+The **distribution of absolute revisions** is also informative:
+
+- Mean absolute revision: **56.8k** jobs  
+- Median absolute revision: **42k** jobs  
+- 25th percentile: **18.5k** jobs  
+- 75th percentile: **71k** jobs  
+
+In most months, revisions fall in a band of roughly **20k–70k jobs**, which is **tiny** compared with 150–160 million jobs.
+
+#### Long-run trends by decade
+
+Grouping the data by decade shows a clear improvement in precision over time, with one obvious exception:
+
+- **1970s:** mean absolute revision ≈ **94.3k**, median **97k**  
+- **1980s:** mean **72.2k**, median **54.5k**  
+- **1990s:** mean **51.4k**, median **41.5k**  
+- **2000s:** mean **48.6k**, median **41.5k**  
+- **2010s:** mean **35.2k**, median **29k**  
+- **2020s:** mean **85.7k**, median **49k**
+
+From the 1970s through the 2010s, the **typical revision shrinks dramatically**, falling from roughly **94k** to **35k** jobs. This reflects methodological improvements, better sampling, and modern data systems.  
+
+The **2020s** stand out with a spike in mean absolute revisions back up to about **85.7k**, driven by the **COVID-19 labor market collapse and recovery**. That is a genuine challenge for measurement, but it is tied to an unprecedented shock, not to a generalized statistical breakdown.
+
+Two key plots from the earlier analysis illustrate this:
+
+- The **time-series of employment levels with recession shading** shows the enormous COVID collapse in April 2020 and the rapid rebound afterward. The benchmark revision corrects the series but **does not change the overall story** of a sharp crash followed by recovery.  
+- The **LOESS trend of relative revision magnitudes over time** shows high relative revisions in the early 1980s, a long downward trend through the 1990s–2010s, and a temporary spike around 2020. Even after the spike, relative revisions remain around or below early-historical levels.
+
+#### Hypothesis testing and typical accuracy
+
+The statistical tests earlier in the report reinforce this picture:
+
+- A one-sample t-test shows that the **average signed revision** is **positive**, around **+11k** jobs, with p ≈ 0.001. That means the CES tends to **slightly understate** employment initially and revise it upward on average.  
+- A test comparing **mean revisions pre- vs post-2020** finds **no significant increase** in average revision size after 2020 (p ≈ 0.48, 95% CI for the difference from −22.5k to +47.6k).  
+- The probability of **very large relative revisions** (e.g., >0.2% of employment) remains extremely low: under 5% even in the volatile post-2020 period (3 out of 67 months).
+
+Taken together, these results show that **CES revisions are usually small, occasionally large during crises, and generally improving over the long run.** The large downward revision in March 2020 is better interpreted as a reflection of **real-time measurement under extreme conditions**, not as evidence that the CES has become unusable.
+
+#### Ruling (Politifact scale): **Mostly False**
+
+There is a kernel of truth: the COVID-era benchmark revision of **−672k jobs** is big, and the 2020s show **larger average revisions** than the calm 2010s. It is fair to say that the pandemic made the jobs numbers harder to measure.
+
+But the sweeping claim that this proves the BLS is “failing” or that CES data “can’t be trusted” is not supported by the evidence:
+
+- The **largest revision is still only about 0.45% of total employment.**  
+- The **average relative revision** across 45+ years is just **0.048%** of payrolls.  
+- **Decade-by-decade trends** show big improvements in accuracy, with a temporary COVID-driven setback.  
+- Statistical tests show **no robust increase** in average revisions after 2020.
+
+The CES remains a **highly informative and broadly reliable** measure of U.S. employment, especially when users understand that the first estimate will sometimes be revised during shocks.
+
+> **Verdict:** **Mostly False.**
+
+
+
+
+## ⭐ Extra Credit: Computationally-Intensive Inference with `infer`
+
+### 1. What Is Computationally-Intensive Statistical Inference? (Non-Technical Explanation)
+
+Most of the hypothesis tests in this project rely on **theory-based methods** such as the classical *t*-test or binomial proportion test. These methods use mathematical formulas and assumptions—for example, that averages follow a normal distribution when the sample is large—to determine p-values and confidence intervals.
+
+**Computationally-intensive statistical inference** takes a different approach. Instead of leaning heavily on formulas, it uses the computer to **simulate many possible worlds** that are consistent with the null hypothesis and then checks where the observed statistic falls in that simulated universe.
+
+In plain language:
+
+- Rather than saying, “Under some ideal assumptions, this statistic should follow a t-distribution,”  
+- The approach is: “Let’s **re-create the world where the null is true thousands of times on the computer** and see how unusual the real result looks compared with those simulations.”
+
+Two central ideas are:
+
+- **Permutation tests:** Randomly shuffle or reassign labels (for example, “pre-2020” vs “post-2020”) many times, compute the difference in each shuffle, and see how often the simulated difference is as large as the observed one.  
+- **Bootstrap methods:** Re-sample with replacement from the observed data many times to approximate the sampling distribution of a statistic (for example, the mean, median, or proportion) without strong assumptions about the underlying population.
+
+Conceptually, the computer becomes a **laboratory** where the data-generating process is rerun thousands of times. This is especially attractive when:
+
+- The data are skewed or heavy-tailed  
+- Classical assumptions (such as normality) are doubtful  
+- The interest lies in statistics like medians or complex functions of the data  
+- A more visual, simulation-based explanation is preferred over dense formulas
+
+In the context of this project, these methods provide a way to **double-check the fact checks** using fewer assumptions and more direct simulation from the observed CES revisions.
+
+---
+
+### 2. How Computational Methods Work: A Conceptual “Flowchart”
+
+#### How a Computational Test Works
+
+1. **Start with the observed data.**  
+   - Here: monthly CES payroll revisions from 1979–2025.
+
+2. **Choose a statistic that captures the question.**  
+   - Example: the difference in mean revisions between the pre-2020 and post-2020 periods.
+
+3. **Specify a “null world.”**  
+   - Assume that there is **no real difference** between the groups. Any observed difference is just random sampling variation.
+
+4. **Generate many simulated datasets under the null.**  
+   - For a permutation test: randomly shuffle or reassign the group labels (“pre2020” / “post2020”) thousands of times.  
+   - For a bootstrap: repeatedly sample (with replacement) from the original data to mimic repeated samples from the population.
+
+5. **Recalculate the statistic for each simulation.**  
+   - Each shuffled or resampled dataset yields a new “fake” difference in means (or median, or proportion).
+
+6. **Build the null distribution.**  
+   - Collect all simulated statistics into a distribution. This shows what values of the statistic would be expected **if the null hypothesis were true**.
+
+7. **Compare the real-world statistic to this distribution.**  
+   - Locate the observed statistic within the simulated distribution.  
+   - The **p-value** is the fraction of simulated statistics that are as extreme or more extreme than the observed one.
+
+8. **Draw a conclusion.**  
+   - If the observed statistic looks typical within this distribution, there is little evidence against the null.  
+   - If it sits in the extreme tail, there is evidence that the null is unlikely and that the alternative hypothesis is more plausible.
+
+This flow is the same whether the statistic is a **mean**, **median**, or **probability**, which makes computational inference a very flexible tool.
+
+---
+
+### 3. Permutation Test for Mean Revisions Pre- vs Post-2020
+
+In the main analysis, a theory-based two-sample *t*-test compared mean revisions before and after 2020 and found:
+
+- t ≈ 0.71  
+- p ≈ 0.48  
+- No statistically significant evidence that mean revisions changed after 2020.
+
+To complement this result, a **permutation test** is used to test the same claim using `infer`.
+**Observed difference in means: post2020 - pre2020**
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+library(infer)
+library(dplyr)
+
+ces_mean_2020 <- ces_full |>
+  mutate(period_2020 = if_else(year >= 2020, "post2020", "pre2020")) |>
+  filter(!is.na(revision))
+
+# Observed difference in means: post2020 - pre2020
+obs_diff <- ces_mean_2020 |>
+  specify(revision ~ period_2020) |>
+  calculate(stat = "diff in means", order = c("post2020", "pre2020"))
+
+obs_diff
+```
+
+### Permutation Test: Did Mean Revisions Change After 2020?
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+set.seed(123)
+
+# Null distribution via permutation under H0: no difference in means
+null_dist <- ces_mean_2020 |>
+  specify(revision ~ period_2020) |>
+  hypothesize(null = "independence") |>
+  generate(reps = 5000, type = "permute") |>
+  calculate(stat = "diff in means", order = c("post2020", "pre2020"))
+
+# Two-sided p-value
+perm_p <- null_dist |>
+  get_p_value(obs_stat = obs_diff$stat, direction = "two_sided")
+
+perm_p
+```
+
+The permutation test shows that the observed difference in mean revisions is small relative to what we would expect under the null hypothesis. The resulting p-value (~0.48) supports the conclusion that **mean revisions did not change after 2020**.
+
+---
+
+### Bootstrap Test of the Mean Revision (Mean ≠ 0)
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+set.seed(123)
+
+# Observed mean revision
+obs_mean <- ces_full |>
+  specify(response = revision) |>
+  calculate(stat = "mean")
+
+obs_mean
+```
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+# Bootstrap distribution of the mean revision
+boot_means <- ces_full |>
+  specify(response = revision) |>
+  generate(reps = 5000, type = "bootstrap") |>
+  calculate(stat = "mean")
+
+# Two-sided p-value for mean ≠ 0
+mean_p_value <- boot_means |>
+  get_p_value(obs_stat = obs_mean$stat, direction = "two_sided")
+
+mean_p_value
+```
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+# 95% bootstrap percentile CI
+mean_ci <- boot_means |>
+  get_confidence_interval(level = 0.95, type = "percentile")
+
+mean_ci
+```
+
+The bootstrap CI excludes zero, confirming that **the mean CES revision is significantly positive**, about +11.5k jobs.
+
+---
+
+### Bootstrap Test of the Median Revision (Median ≠ 0)
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+set.seed(123)
+
+# Observed median revision
+obs_median <- ces_full |>
+  specify(response = revision) |>
+  calculate(stat = "median")
+
+obs_median
+```
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+# Bootstrap distribution for the median
+boot_medians <- ces_full |>
+  specify(response = revision) |>
+  generate(reps = 5000, type = "bootstrap") |>
+  calculate(stat = "median")
+
+# Two-sided p-value for median ≠ 0
+median_p_value <- boot_medians |>
+  get_p_value(obs_stat = obs_median$stat, direction = "two_sided")
+
+median_p_value
+```
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+# 95% bootstrap CI for the median revision
+median_ci <- boot_medians |>
+  get_confidence_interval(level = 0.95, type = "percentile")
+
+median_ci
+```
+
+The bootstrap median revision is also clearly above zero, indicating that upward revisions dominate even at the median.
+
+---
+
+### Simulation-Based Test for P(Revision > 0)
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+ces_sign <- ces_full |>
+  mutate(is_positive = revision > 0) |>
+  filter(!is.na(is_positive))
+
+# Observed proportion of positive revisions
+obs_prop <- ces_sign |>
+  specify(response = is_positive, success = "TRUE") |>
+  calculate(stat = "prop")
+
+obs_prop
+```
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+set.seed(123)
+
+# Simulated null distribution under p = 0.5
+null_prop_dist <- ces_sign |>
+  specify(response = is_positive, success = "TRUE") |>
+  hypothesize(null = "point", p = 0.5) |>
+  generate(reps = 5000, type = "simulate") |>
+  calculate(stat = "prop")
+
+# One-sided p-value for P(revision > 0) > 0.5
+prop_p_value <- null_prop_dist |>
+  get_p_value(obs_stat = obs_prop$stat, direction = "greater")
+
+prop_p_value
+```
+
+The observed proportion of positive revisions is greater than 0.5, and the simulation confirms that this would rarely occur under a fair 50/50 process.  
+Thus **positive revisions occur more frequently than negative ones**.
+
+---
+
+### Summary
+
+The computational inference results reinforce the fact-check conclusions:
+
+- Mean revisions did **not** change after 2020 (permutation test).  
+- Mean and median revisions are both **significantly positive** (bootstrap tests).  
+- Upward revisions occur **more often than 50%** of the time (simulation test).
+
+These simulation-based methods agree with the theory-based tests and strengthen the reliability of the findings.
