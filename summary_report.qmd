@@ -236,6 +236,7 @@ Understanding these patterns is essential for designing equitable housing interv
 Understanding whether public service outcomes vary across neighborhoods is central to evaluating equity in service delivery.
 While differences in average resolution times are often used to assess disparities, such averages can mask important distinctions between typical service experiences and rare but extreme delays.
 This analysis examines whether differences in NYC 311 complaint resolution times across income levels reflect everyday service performance or are driven primarily by unusual, long-running cases, and whether these patterns vary by complaint type.
+
 ![Figure 5: 311 Resolutions Time by Income Quintile](311_Resolutions_time_by_income_quintile.jpeg)
 
 The analysis uses NYC 311 complaint records linked to census-tract median household income.
