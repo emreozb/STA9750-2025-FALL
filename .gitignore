@@ -24,4 +24,5 @@ data/**
 /.quarto/
 **/*.quarto_ipynb
 # Allow the published policy brief PDF to be tracked
-!docs/policy_brief.pdf
+!docs/policy_brief.pdf.RDataTmp*
+.DS_Store

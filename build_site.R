@@ -7,29 +7,7 @@ if(!quarto::quarto_binary_sitrep()){
   stop("Something is wrong with your quarto installation.")
 }
 quarto::quarto_render(".")
-system("git add docs/*")
+system("git add -A docs")
 
-if(file.exists("index.qmd")){
-  system("git add index.qmd")
-}
-
-if(file.exists("mp01.qmd")){
-  system("git add mp01.qmd")
-}
-
-if(file.exists("mp02.qmd")){
-  system("git add mp02.qmd")
-}
-
-if(file.exists("mp03.qmd")){
-  system("git add mp03.qmd")
-}
-
-if(file.exists("mp04.qmd")){
-  system("git add mp04.qmd")
-}
-
-# if(!any(grepl("rstudio", search()))){q("no")} 
-
-
-
+files <- c("index.qmd","mp01.qmd","mp02.qmd","mp03.qmd","mp04.qmd","summary_report.qmd")
+for (f in files) if (file.exists(f)) system(paste("git add", shQuote(f)))
