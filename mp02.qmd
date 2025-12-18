@@ -25,7 +25,7 @@ resources:
   - policy_brief.pdf
 ---
 
-![](intro_header.jpg)
+![](figs/intro_header.jpg)
 
 ## Introduction
 Housing affordability sits at the heart of America’s urban challenge—especially in large metropolitan regions where zoning rules, construction rates, and income levels all determine who can actually afford a home. In this mini-project, we take a fresh look at the “Yes-In-My-Backyard” (YIMBY) approach, which argues that more permissive zoning and higher housing supply lead to greater affordability and more dynamic cities.

@@ -384,6 +384,12 @@ While the results are robust, several limitations remain:
 
 These limitations suggest that findings should be interpreted as evidence of structural patterns, not definitive proof of intentional enforcement bias.
 
+# Overarching Answer
+
+Neighborhood income is strongly related to housing complaint patterns in New York City. After controlling for housing size, rent burden, and borough, lower-income neighborhoods tend to face more serious housing problems, especially issues related to basic living conditions such as heat and hot water, water leaks, and sanitation. In contrast, higher-income neighborhoods often submit more complaints overall, which suggests that complaint data capture not only housing conditions but also differences in residents’ ability and willingness to report problems.
+Income also shapes the types of complaints residents make and how those complaints are addressed. Lower-income areas report a larger share of essential habitability complaints, while higher-income neighborhoods are more likely to report quality-of-life issues. Resolution outcomes differ as well. Complaints in lower-income neighborhoods are more likely to remain unresolved or experience longer delays, particularly for cases involving building enforcement. This indicates that income influences both housing risk and the effectiveness of the city’s response.
+Overall, neighborhood income is a strong predictor of the intensity, composition, and resolution of housing-related complaints. Housing complaint data, therefore, reflect more than just physical housing conditions as they also reflect social and economic differences in reporting behavior and service responsiveness. These findings show that income is a key factor shaping how housing problems appear and persist across New York City.
+
 # Future Work
 
 With additional time, this analysis could be extended to a multi-year panel spanning several years of housing complaints and ACS estimates.
