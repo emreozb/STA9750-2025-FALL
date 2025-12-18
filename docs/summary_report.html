@@ -40,7 +40,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-1fe81d0376b2c50856e68e651e390326.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-f59cc608e70ce16b384b3e6fc30ca698.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-f93c2b1f3f0577f377aefa4848a86a36.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -199,7 +199,7 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<p><img src="nyc_housing.png" class="img-fluid"></p>
+<p><img src="figs/nyc_housing.png" class="img-fluid"></p>
 <section id="motivation-and-context" class="level1">
 <h1>Motivation and Context</h1>
 <p>New York City’s housing complaint systems generate a detailed administrative record of how residents interact with housing and municipal services. These data are widely used to study housing quality, neighborhood distress, and public service delivery. However, complaint records reflect not only underlying housing conditions, but also reporting behavior, access to services, and administrative processes. Understanding how these systems relate to neighborhood socioeconomic context is therefore essential for interpreting complaint patterns. With this, the team’s overarching question motivating this course project is: To what extent do neighborhood income levels predict the intensity, composition, and resolution of housing-related complaints in New York City, after controlling for structural housing characteristics?</p>
@@ -252,7 +252,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Across all performance metrics, the Random Forest consistently outperforms linear alternatives. When evaluated on the held-out test set, the Random Forest attains an R^2 of approximately 0.54, indicating that more than half of the variation in tract-level log income can be explained using complaint and resolution features alone. Predicted versus actual plots show close alignment across most of the income distribution, with modest under-prediction at the upper tail:</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="Predicted_vs_Observed_Neighborhood_Income.png" class="img-fluid figure-img"></p>
+<p><img src="figs/Predicted_vs_Observed_Neighborhood_Income.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 1: Predicted vs Observed Neighborhood_Income</figcaption>
 </figure>
 </div>
@@ -263,7 +263,7 @@ ul.task-list li input[type="checkbox"] {
 <p>To better understand which features drive predictive performance, I examine Random Forest permutation importance. Structural variables such as rent burden and housing stock emerge as the most influential predictors, followed by complaint composition measures and resolution metrics. Borough indicators also rank highly, reflecting persistent geographic heterogeneity:</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="Most_Important_Predictors_Neighborhood_Income.png" class="img-fluid figure-img"></p>
+<p><img src="figs/Most_Important_Predictors_Neighborhood_Income.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 2: Most Important Predictors of Neighborhood Income</figcaption>
 </figure>
 </div>
@@ -283,7 +283,7 @@ ul.task-list li input[type="checkbox"] {
 <p>When normalized by housing units, lower-income census tracts—particularly in the Bronx and northern Brooklyn—exhibit elevated rates of habitability-related complaints, such as lack of heat, water leaks, and unsanitary conditions. These patterns reflect aging infrastructure and persistent structural deficiencies. However, when normalized by population, higher-income neighborhoods in Manhattan and Queens often report equal or greater complaint rates per resident. This divergence suggests that complaint data reflect not only housing conditions but also differences in civic engagement and access to reporting systems.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="311_complaint_rate_per_1000.png" class="img-fluid figure-img"></p>
+<p><img src="figs/311_complaint_rate_per_1000.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 3: 311 Complaint Rate per 1000 Residents</figcaption>
 </figure>
 </div>
@@ -294,7 +294,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Higher-income neighborhoods tend to receive faster and more consistent follow-up, likely due to greater visibility, advocacy, and fewer institutional barriers. In contrast, lower-income areas may underreport due to fear of retaliation, limited digital access, or distrust in government systems—resulting in unresolved housing stress that remains hidden in administrative data.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="partial_dependence_complaint_rate.png" class="img-fluid figure-img"></p>
+<p><img src="figs/partial_dependence_complaint_rate.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 4: Partial Dependence of Complaint Rate on Income</figcaption>
 </figure>
 </div>
@@ -309,14 +309,14 @@ ul.task-list li input[type="checkbox"] {
 <p>Understanding whether public service outcomes vary across neighborhoods is central to evaluating equity in service delivery. While differences in average resolution times are often used to assess disparities, such averages can mask important distinctions between typical service experiences and rare but extreme delays. This analysis examines whether differences in NYC 311 complaint resolution times across income levels reflect everyday service performance or are driven primarily by unusual, long-running cases, and whether these patterns vary by complaint type.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="311_Resolutions_time_by_income_quintile.jpeg" class="img-fluid figure-img"></p>
+<p><img src="figs/311_Resolutions_time_by_income_quintile.jpeg" class="img-fluid figure-img"></p>
 <figcaption>Figure 5: 311 Resolutions Time by Income Quintile</figcaption>
 </figure>
 </div>
 <p>The analysis uses NYC 311 complaint records linked to census-tract median household income. Resolution time is measured as the number of days between complaint creation and closure, with neighborhoods grouped into income quintiles for comparison. A key feature of this data is that resolution times are highly skewed: most complaints are resolved quickly, while a small fraction take weeks or months to close. To ensure fair comparisons across neighborhoods, resolution times were examined both in raw form and after applying a logarithmic transformation that reduces the influence of extreme delays. Random Forest models were also used to assess the relative importance of income compared to other factors such as complaint type and seasonality. Overall, typical resolution times decline modestly with income, indicating that most complaints are resolved slightly faster in higher-income neighborhoods. However, average resolution times increase with income due to the presence of rare but very long delays. This divergence shows that income differences are driven primarily by extreme cases rather than by systematic differences in everyday service delivery.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="Resolution_Time_Income_Quintile.png" class="img-fluid figure-img"></p>
+<p><img src="figs/Resolution_Time_Income_Quintile.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 6: Resolution Time by Income Quintile and Complaint Type</figcaption>
 </figure>
 </div>
@@ -327,21 +327,21 @@ ul.task-list li input[type="checkbox"] {
 <p>Our analysis shows that neighborhood income levels have a strong influence on housing complaints across New York City. After accounting for differences in housing size and density, lower-income neighborhoods consistently have higher rates of housing complaints. This suggests that residents in these areas are not just reporting more issues because they live in larger buildings, but because they experience more serious and ongoing housing problems. Overall, income is closely tied to where housing complaints are most concentrated across the city. This pattern is visible across multiple major complaint categories, with complaint rates declining steadily as median household income increases.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="complaints_prevalence_vs_income.png" class="img-fluid figure-img"></p>
+<p><img src="figs/complaints_prevalence_vs_income.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 7: Complaint Prevalence vs Income by Complaint Type</figcaption>
 </figure>
 </div>
 <p>Income also affects the types of housing problems people report. Lower-income neighborhoods are more likely to experience complaints related to basic living conditions, including issues with heat and hot water, water leaks, and unsanitary conditions. These are essential living concerns rather than minor inconveniences, showing that income plays a role in the severity of housing issues. Statistical testing confirms that complaint patterns differ meaningfully across income levels, reinforcing the idea that these differences are not random.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="Top_15_complaints.png" class="img-fluid figure-img"></p>
+<p><img src="figs/Top_15_complaints.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 8: Top 15 Complaints Across Income Quintiles</figcaption>
 </figure>
 </div>
 <p>The stacked bar chart shows that habitability-related housing complaints account for a larger share of reports in the lowest income quintiles compared to higher-income neighborhoods. Finally, the relationship between income and complaints is not perfectly linear. Complaint rates drop sharply as income rises from low to middle levels, then level off in higher-income areas. This suggests that once neighborhoods reach a certain income threshold, housing conditions improve significantly, but additional income has a smaller impact.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="Income_Effect_Water_Leak_Complaints.png" class="img-fluid figure-img"></p>
+<p><img src="figs/Income_Effect_Water_Leak_Complaints.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 9: Income Effect on Water Leak Complaints</figcaption>
 </figure>
 </div>
@@ -352,21 +352,21 @@ ul.task-list li input[type="checkbox"] {
 <p>This analysis examines whether neighborhood income levels are associated with the likelihood that housing complaints remain unresolved in New York City. By combining HPD and DOB complaint data with American Community Survey (ACS) income information at the census tract level, we find clear evidence that unresolved complaints are disproportionately concentrated in lower-income neighborhoods. Tracts in the lowest income quintiles consistently exhibit higher unresolved complaint rates compared to higher-income areas, suggesting that income is closely linked not only to where complaints occur, but to whether they are effectively addressed.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="unresolved_complaint_rate_income_quintile.png" class="img-fluid figure-img"></p>
+<p><img src="figs/unresolved_complaint_rate_income_quintile.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 10: Unresolved Complaint Rate by Income Quintile</figcaption>
 </figure>
 </div>
 <p>The analysis further shows that this pattern holds across agencies, although unresolved complaints are more prevalent in DOB records than in HPD. This indicates that enforcement and resolution processes may differ by agency, with more complex or structurally intensive issues often handled by DOB remaining open for longer periods, particularly in lower-income areas.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="unresolved_complaint_over_time_by_agency.png" class="img-fluid figure-img"></p>
+<p><img src="figs/unresolved_complaint_over_time_by_agency.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 11: Unresolved Complaint Over Time by Agency</figcaption>
 </figure>
 </div>
 <p>Time-based analyses reveal that unresolved complaints persist over multiple months and years in these neighborhoods, reinforcing the idea that resolution delays are not temporary but systematic. Logistic regression models support these descriptive findings, showing a negative relationship between neighborhood income and the probability of complaints remaining unresolved, even when accounting for housing units, rent burden, and complaint volume.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="predicted_probability_unresolved_complaints.png" class="img-fluid figure-img"></p>
+<p><img src="figs/predicted_probability_unresolved_complaints.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 12: Predicted Probability of Unresolved Complaints</figcaption>
 </figure>
 </div>
@@ -378,7 +378,7 @@ ul.task-list li input[type="checkbox"] {
 <p>New York City relies heavily on the NYC311 as an insight in identifying housing issues, yet it is not clear as to what extent these reports translate into formal regulatory action.Using publicly available data from both databases in 2023, housing related complaints from both NYC311 and the New York City Department of Buildings were cleaned and aligned to enable a direct comparison across said databases. Figure 1: ‘Monthly Share of Complaints Within Each System (2023)’ is used to visually illustrate how complaint activity in each system evolves overtime within the time span of 2023.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="sq5_monthly_share.jpeg" class="img-fluid figure-img"></p>
+<p><img src="figs/sq5_monthly_share.jpeg" class="img-fluid figure-img"></p>
 <figcaption>Figure 13: ‘Monthly Share of Complaints Within Each System (2023)’</figcaption>
 </figure>
 </div>
@@ -391,14 +391,14 @@ ul.task-list li input[type="checkbox"] {
 <p>This analysis examines whether unresolved 311 housing complaints in New York City are spatially clustered and whether such clustering is more common in lower-income neighborhoods. Using 311 complaint data from 2023, complaints were classified as unresolved when no closure date was recorded. Each complaint was assigned to a census tract using latitude and longitude coordinates and merged with tract-level income data from the American Community Survey. Census tracts were grouped into income quintiles to assess socioeconomic patterns. Local Moran’s I (LISA) was used to identify statistically significant spatial clusters of unresolved complaints. The hotspot map (Figure 6A) shows clear High–High clusters, indicating that unresolved complaints are geographically concentrated rather than randomly distributed across the city.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="hotspot_map_unresolved_311.png" class="img-fluid figure-img"></p>
+<p><img src="figs/hotspot_map_unresolved_311.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 14: Hotspot Map Unresolved 311 Housing Complaint</figcaption>
 </figure>
 </div>
 <p>When these clusters are examined by income quintile (Figure 6B), a clear pattern emerges. High–High hotspots are concentrated primarily in lower-income neighborhoods (Q1 and Q2), while higher-income tracts are mostly classified as non-significant or Low–Low clusters. This suggests that unresolved housing issues persist more frequently and more spatially in lower-income areas.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="spatial_clustering_unresolved_311_complaints.png" class="img-fluid figure-img"></p>
+<p><img src="figs/spatial_clustering_unresolved_311_complaints.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 15: Spatial Clustering of Unresolved 311 complaints</figcaption>
 </figure>
 </div>
@@ -514,7 +514,7 @@ ul.task-list li input[type="checkbox"] {
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/emreozb\.github\.io\/STA9750-2025-FALL\/");
+        var filterRegex = new RegExp("https:\/\/emreozb\.github\.io\/STA9750-2025-FALL");
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

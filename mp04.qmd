@@ -25,7 +25,7 @@ format:
     self-contained: false
 ---
 
-![](Newsletter-1080x675.jpg)
+![](figs/Newsletter-1080x675.jpg)
 
 ## Introduction
 

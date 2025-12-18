@@ -26,7 +26,7 @@ format:
 
 ---
 
-![](intro_header2.png)
+![](figs/intro_header2.png)
 
 ## Introduction
 Central Park stands out in green at the heart of Manhattan, but **1,093,439** trees are spread across all five of New York City’s boroughs. Together, they form one of the most diverse and essential urban forests in the United States. These trees cool neighborhoods in summer, improve air quality, reduce flooding, and contribute to the character and livability of every blockn from the dense streets of Midtown to the quieter corners of Staten Island.
