@@ -2,27 +2,26 @@
 project:
   type: website
   output-dir: docs
+  
 title: "Individual Report - Breaking Lease: How We Met Your Landlord"
 authors: "Emre Ozbalta"
 website:
   title: "Individual Report - Breaking Lease: How We Met Your Landlord"
   navbar:
     search: true        # shows the search box in the header
-  pdf:
-    toc: true
-    latex-engine: xelatex
-    number-sections: true
-    keep-tex: false
+    
+execute:         
+  progress: false
     
 format:
   html:
-    theme: flatly   
+    page-layout: full 
+    theme: flatly
     toc: true
     toc-title: "CONTENT"
     toc-location: left   # puts the TOC on the right
     toc-depth: 3          # include up to ### headings
     number-sections: false
-    page-layout: full
     self-contained: false
 ---
 
@@ -55,6 +54,8 @@ This data engineering process highlighted an important lesson: **methodological 
 #| code-fold: true
 #| message: false
 #| warning: false
+#| execute: false
+
 # Load Required Libraries & Define ACS Variables
 
 # Load core libraries for ACS and data manipulation
@@ -507,6 +508,11 @@ Importantly, I did not treat the log transformation as a purely technical fix. I
 #| code-fold: true
 #| message: false
 #| warning: false
+#| fig-width: 14
+#| fig-height: 5
+#| out-width: "100%"
+
+
 library(patchwork)
 
 res_rf_data <- nyc311_with_tract %>%
@@ -627,7 +633,7 @@ ggplot(sq2_lm_data,
   theme_minimal()
 ```
 
-5. Regression Analysis: Baseline Income Effects
+## 5. Regression Analysis: Baseline Income Effects
 
 Building on these descriptive findings, I estimated a baseline linear regression relating log-transformed resolution time to median household income (scaled in $10,000 increments). The estimated income coefficient was positive and statistically significant, indicating that higher income is associated with longer resolution times on the log scale.
 
@@ -924,6 +930,10 @@ importance_by_type_pretty <- rf2_data %>%
 #| code-fold: true
 #| message: false
 #| warning: false
+#| fig-width: 14
+#| fig-height: 5
+#| out-width: "100%"
+#| 
 library(dplyr)
 library(ggplot2)
 library(ggrepel)
@@ -1034,6 +1044,11 @@ ggplot(binned_sq2,
 #| code-fold: true
 #| message: false
 #| warning: false
+#| fig-width: 14
+#| fig-height: 5
+#| out-width: "100%"
+
+
 nyc311_with_tract <- nyc311_with_tract %>% mutate(
   complaint_type = str_to_upper(complaint_type)  # ALL CAPS
 ) 

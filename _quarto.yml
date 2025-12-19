@@ -26,9 +26,9 @@ website:
 
 format:
   html:
+    page-layout: full
     theme: darkly
     toc: false
-    page-layout: full
     self-contained: false
     embed-resources: false
 

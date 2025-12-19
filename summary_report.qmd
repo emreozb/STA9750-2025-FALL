@@ -209,6 +209,7 @@ However, when normalized by population, higher-income neighborhoods in Manhattan
 This divergence suggests that complaint data reflect not only housing conditions but also differences in civic engagement and access to reporting systems.
 
 ![Figure 3: 311 Complaint Rate per 1000 Residents](figs/311_complaint_rate_per_1000.png)
+
 ![](figs/311_complaint_units.png)
 
 
