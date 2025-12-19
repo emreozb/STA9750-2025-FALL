@@ -55,6 +55,7 @@ This data engineering process highlighted an important lesson: **methodological 
 #| message: false
 #| warning: false
 #| execute: false
+#| output: false
 
 # Load Required Libraries & Define ACS Variables
 
@@ -509,18 +510,13 @@ Importantly, I did not treat the log transformation as a purely technical fix. I
 #| message: false
 #| warning: false
 #| fig-width: 14
-#| fig-height: 5
+#| fig-height: 6
 #| out-width: "100%"
-
 
 library(patchwork)
 
 res_rf_data <- nyc311_with_tract %>%
-  select(
-    resolution_days_311,
-    income, complaint_type, borough,
-    month, dow
-  ) %>%
+  select(resolution_days_311, income, complaint_type, borough, month, dow) %>%
   mutate(
     complaint_type = factor(complaint_type),
     borough = factor(borough),
@@ -531,14 +527,23 @@ res_rf_data <- nyc311_with_tract %>%
 p_raw <- ggplot(res_rf_data, aes(x = resolution_days_311)) +
   geom_histogram(bins = 50, fill = "grey40", color = "grey15") +
   labs(title = "Raw Resolution Time", x = "Days", y = "Count") +
-  theme_minimal(base_size = 14)
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(size = 18, face = "bold", margin = margin(b = 8)),
+    plot.margin = margin(t = 12, r = 12, b = 8, l = 8)
+  )
 
 p_log <- ggplot(res_rf_data, aes(x = log1p(resolution_days_311))) +
   geom_histogram(bins = 50, fill = "grey60", color = "grey20") +
   labs(title = "Log-Transformed Resolution Time", x = "Log(1 + Days)", y = "Count") +
-  theme_minimal(base_size = 14)
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(size = 18, face = "bold", margin = margin(b = 8)),
+    plot.margin = margin(t = 12, r = 12, b = 8, l = 8)
+  )
 
-patchwork::wrap_plots(p_raw, p_log, ncol = 2)
+patchwork::wrap_plots(p_raw, p_log, ncol = 2) +
+  plot_layout(widths = c(1, 1))
 
 ```
 
@@ -931,7 +936,7 @@ importance_by_type_pretty <- rf2_data %>%
 #| message: false
 #| warning: false
 #| fig-width: 14
-#| fig-height: 5
+#| fig-height: 4
 #| out-width: "100%"
 #| 
 library(dplyr)
