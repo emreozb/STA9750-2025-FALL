@@ -507,6 +507,20 @@ Importantly, I did not treat the log transformation as a purely technical fix. I
 #| code-fold: true
 #| message: false
 #| warning: false
+library(patchwork)
+
+res_rf_data <- nyc311_with_tract %>%
+  select(
+    resolution_days_311,
+    income, complaint_type, borough,
+    month, dow
+  ) %>%
+  mutate(
+    complaint_type = factor(complaint_type),
+    borough = factor(borough),
+    dow = factor(dow)
+  ) %>%
+  na.omit()
 
 p_raw <- ggplot(res_rf_data, aes(x = resolution_days_311)) +
   geom_histogram(bins = 50, fill = "grey40", color = "grey15") +
@@ -518,7 +532,7 @@ p_log <- ggplot(res_rf_data, aes(x = log1p(resolution_days_311))) +
   labs(title = "Log-Transformed Resolution Time", x = "Log(1 + Days)", y = "Count") +
   theme_minimal(base_size = 14)
 
-p_raw | p_log
+patchwork::wrap_plots(p_raw, p_log, ncol = 2)
 
 ```
 
@@ -580,6 +594,8 @@ ggplot(nyc311_with_tract,
 #| code-fold: true
 #| message: false
 #| warning: false
+sq2_lm_data <- nyc311_with_tract %>%
+  mutate(income_10k = income / 10000)
 ggplot(sq2_lm_data,
        aes(x = income_10k, y = resolution_days_311)) +
   geom_point(alpha = 0.1) +
@@ -647,18 +663,7 @@ At the same time, income’s non-negligible importance suggests that neighborhoo
 library(ranger)
 library(dplyr)
 
-res_rf_data <- nyc311_with_tract %>%
-  select(
-    resolution_days_311,
-    income, complaint_type, borough,
-    month, dow
-  ) %>%
-  mutate(
-    complaint_type = factor(complaint_type),
-    borough = factor(borough),
-    dow = factor(dow)
-  ) %>%
-  na.omit()
+
 
 set.seed(123)
 res_rf_sq2 <- ranger(
@@ -704,7 +709,7 @@ tibble::tibble(
 #| code-fold: true
 #| message: false
 #| warning: false
-#| library(gt)
+library(gt)
 library(dplyr)
 library(scales)
 

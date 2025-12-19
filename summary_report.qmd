@@ -3,7 +3,7 @@ project:
   type: website
   output-dir: docs
 title: "Summary Report - Breaking Lease: How We Met Your Landlord"
-authors: "Emre Ozbalta, Nusrat Akter, Sebastian Alejos, Deanna Bruno, Liam Cooke, Yashpal Saini, Cristina Moreno Siguenza"
+authors: "Nusrat Akter, Sebastian Alejos, Deanna Bruno, Liam Cooke, Emre Ozbalta, Yashpal Saini, Cristina Moreno Siguenza"
 website:
   title: "Summary Report - Breaking Lease: How We Met Your Landlord"
   navbar:
@@ -209,6 +209,8 @@ However, when normalized by population, higher-income neighborhoods in Manhattan
 This divergence suggests that complaint data reflect not only housing conditions but also differences in civic engagement and access to reporting systems.
 
 ![Figure 3: 311 Complaint Rate per 1000 Residents](figs/311_complaint_rate_per_1000.png)
+![](figs/311_complaint_units.png)
+
 
 ### Variation in Complaint Types, Resolution Outcomes, Reporting Behavior
 

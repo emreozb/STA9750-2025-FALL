@@ -20,7 +20,7 @@ website:
         text: Mini-Project 04
       - href: summary_report.qmd
         text: Final Project - Group Summary
-      - href: individual_report.qmd.qmd
+      - href: individual_report.qmd
         text: Final Project - Individual Report       
     search: false
 
