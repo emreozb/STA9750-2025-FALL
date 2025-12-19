@@ -9,5 +9,5 @@ if(!quarto::quarto_binary_sitrep()){
 quarto::quarto_render(".")
 system("git add -A docs")
 
-files <- c("index.qmd","mp01.qmd","mp02.qmd","mp03.qmd","mp04.qmd","summary_report.qmd")
+files <- c("index.qmd","mp01.qmd","mp02.qmd","mp03.qmd","mp04.qmd","summary_report.qmd", "individual_report.qmd")
 for (f in files) if (file.exists(f)) system(paste("git add", shQuote(f)))
